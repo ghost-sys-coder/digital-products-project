@@ -3,6 +3,7 @@ import { vi } from "vitest";
 import type { Order } from "../lib/orders";
 import type { CatalogProduct, Checkout, Store } from "../lib/catalog.types";
 import { STORE_ID } from "../lib/store-config";
+import type { PaymentConnection, PaymentOAuthAttempt, ProductPaymentRef } from "../lib/payment.types";
 
 type DbError = { code: string; message: string } | null;
 type Result = { data: unknown; error: DbError };
@@ -10,6 +11,7 @@ type Row = Record<string, unknown>;
 export const OWNER_ID = "975ac870-5ab8-43a5-9d70-c051c42fc61f";
 export const state = {
   orders: [] as Order[], products: [] as CatalogProduct[], checkouts: [] as Checkout[], stores: [] as Store[],
+  payment_connections: [] as PaymentConnection[], payment_oauth_attempts: [] as PaymentOAuthAttempt[], product_payment_refs: [] as ProductPaymentRef[],
   dbError: false, insertError: null as DbError, markSentError: false,
   stripeProducts: new Map<string, Row>(), stripePrices: new Map<string, Row>(), sessions: new Map<string, Row>(),
 };
@@ -38,18 +40,21 @@ export function seedProduct(overrides: Partial<CatalogProduct> = {}): CatalogPro
   return product;
 }
 function rows(table: string): Row[] {
-  if (!["orders", "products", "checkouts", "stores"].includes(table)) throw new Error(`Unexpected table: ${table}`);
+  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs"].includes(table)) throw new Error(`Unexpected table: ${table}`);
   return state[table as "orders"] as unknown as Row[];
 }
 class Query implements PromiseLike<Result> {
   operation = "select"; values: Row = {}; filters: [string, unknown][] = [];
   sorting: [string, boolean][] = []; rowLimit = Infinity;
+  greater: [string, unknown][] = [];
   constructor(public table: string) {}
   insert(values: Row) { this.operation = "insert"; this.values = values; return this; }
+  upsert(values: Row) { this.operation = "upsert"; this.values = values; return this; }
   update(values: Row) { this.operation = "update"; this.values = values; return this; }
   select() { return this; }
   eq(key: string, value: unknown) { this.filters.push([key, value]); return this; }
   is(key: string, value: unknown) { return this.eq(key, value); }
+  gt(key: string, value: unknown) { this.greater.push([key, value]); return this; }
   order(key: string, options?: { ascending?: boolean }) { this.sorting.push([key, options?.ascending !== false]); return this; }
   limit(value: number) { this.rowLimit = value; return this; }
   single() { return Promise.resolve(this.execute(true)); }
@@ -57,9 +62,14 @@ class Query implements PromiseLike<Result> {
   execute(single = false): Result {
     if (state.dbError) return { data: null, error: { code: "08000", message: "Database unavailable" } };
     const tableRows = rows(this.table);
+    if (this.operation === "upsert") {
+      const existing = tableRows.find(row => row.connection_id === this.values.connection_id && row.product_id === this.values.product_id);
+      if (existing) Object.assign(existing, this.values); else tableRows.push({ ...this.values });
+      return { data: null, error: null };
+    }
     if (this.operation === "insert") {
       if (state.insertError) return { data: null, error: state.insertError };
-      if (tableRows.some((row) => (row.id === this.values.id) ||
+      if (tableRows.some((row) => (this.values.id !== undefined && row.id === this.values.id) ||
         (this.table === "orders" && (row.stripe_session_id === this.values.stripe_session_id || row.download_token_hash === this.values.download_token_hash)) ||
         (this.table === "products" && row.store_id === this.values.store_id && row.slug === this.values.slug))) {
         return { data: null, error: { code: "23505", message: "Unique violation" } };
@@ -70,7 +80,7 @@ class Query implements PromiseLike<Result> {
       else { data = { created_at: new Date().toISOString(), ...this.values }; tableRows.push(data); }
       return { data: { ...data }, error: null };
     }
-    let matches = tableRows.filter((row) => this.filters.every(([key, value]) => row[key] === value));
+    let matches = tableRows.filter((row) => this.filters.every(([key, value]) => row[key] === value) && this.greater.every(([key, value]) => String(row[key]) > String(value)));
     if (this.operation === "update") {
       if (state.markSentError && this.values.email_status === "sent") return { data: null, error: { code: "08000", message: "Write failed" } };
       matches.forEach((row) => Object.assign(row, this.values));
@@ -94,6 +104,16 @@ export const storageDownload = vi.fn();
 export const storageExists = vi.fn();
 export const rpc = vi.fn(async (name: string, args: Row) => {
   if (state.dbError) return { data: null, error: { code: "08000" } };
+  if (name === "activate_payment_connection") {
+    if (!state.stores.some(s => s.id === args.p_store_id && s.owner_user_id === args.p_owner_id)) return { data: null, error: { code: "42501" } };
+    const existing = state.payment_connections.find(c => c.external_account_id === args.p_account_id && c.livemode === args.p_livemode);
+    if (existing && existing.store_id !== args.p_store_id) return { data: null, error: { code: "23505" } };
+    state.payment_connections.filter(c => c.store_id === args.p_store_id && c.livemode === args.p_livemode).forEach(c => c.is_current = false);
+    const connection = existing ?? { id: randomUUID(), store_id: args.p_store_id as string, provider: "stripe" as const, external_account_id: args.p_account_id as string, livemode: args.p_livemode as boolean, created_at: new Date().toISOString() };
+    Object.assign(connection, { is_current: true, status: args.p_charges_enabled && args.p_payouts_enabled ? "connected" : "restricted", charges_enabled: args.p_charges_enabled, payouts_enabled: args.p_payouts_enabled, country: args.p_country, requirements: args.p_requirements, updated_at: new Date().toISOString() });
+    if (!existing) state.payment_connections.push(connection as PaymentConnection);
+    return { data: connection.id, error: null };
+  }
   if (name === "consume_download") {
     const order = state.orders.find((order) => order.download_token_hash === args.p_token_hash && order.download_count < order.max_downloads && Date.parse(order.token_expires_at) > Date.now());
     if (!order) return { data: [], error: null };
@@ -126,8 +146,13 @@ export const pricesRetrieve = vi.fn();
 export const pricesCreate = vi.fn();
 export const sessionsCreate = vi.fn();
 export const sessionsRetrieve = vi.fn();
+export const accountsRetrieve = vi.fn();
+export const oauthToken = vi.fn();
+export const oauthDeauthorize = vi.fn();
+export const oauthAuthorizeUrl = vi.fn();
 export function resetFakes() {
   state.orders = []; state.products = []; state.checkouts = [];
+  state.payment_connections = []; state.payment_oauth_attempts = []; state.product_payment_refs = [];
   state.stores = [{ id: STORE_ID, owner_user_id: OWNER_ID, name: "VeilCode Studio", tagline: "Good systems. Better work.", bio: "Practical studio tools.", support_email: "support@veilcode.studio", website_url: "https://veilcode.studio" }];
   state.dbError = false; state.insertError = null; state.markSentError = false;
   state.stripeProducts.clear(); state.stripePrices.clear(); state.sessions.clear();
@@ -137,15 +162,16 @@ export function resetFakes() {
   storageDownload.mockReset().mockResolvedValue({ data: new Blob(["image"]), error: null });
   storageExists.mockReset().mockResolvedValue({ data: true, error: null });
   constructEvent.mockReset().mockImplementation((body: string) => JSON.parse(body));
-  productsRetrieve.mockReset().mockImplementation(async (id: string) => { const product = state.stripeProducts.get(id); if (!product) throw { code: "resource_missing" }; return { ...product }; });
-  productsCreate.mockReset().mockImplementation(async (input: Row) => { const product = { livemode: false, ...input }; state.stripeProducts.set(input.id as string, product); return { ...product }; });
-  productsUpdate.mockReset().mockImplementation(async (id: string, input: Row) => {
-    const product = { ...state.stripeProducts.get(id), ...input };
-    state.stripeProducts.set(id, product);
+  const scoped = (id: string, options?: { stripeAccount?: string }) => options?.stripeAccount ? `${options.stripeAccount}:${id}` : id;
+  productsRetrieve.mockReset().mockImplementation(async (id: string, _params?: unknown, options?: { stripeAccount?: string }) => { const product = state.stripeProducts.get(scoped(id, options)); if (!product) throw { code: "resource_missing" }; return { ...product }; });
+  productsCreate.mockReset().mockImplementation(async (input: Row, options?: { stripeAccount?: string }) => { const product = { livemode: false, ...input }; state.stripeProducts.set(scoped(input.id as string, options), product); return { ...product }; });
+  productsUpdate.mockReset().mockImplementation(async (id: string, input: Row, options?: { stripeAccount?: string }) => {
+    const product = { ...state.stripeProducts.get(scoped(id, options)), ...input };
+    state.stripeProducts.set(scoped(id, options), product);
     return { ...product };
   });
-  pricesRetrieve.mockReset().mockImplementation(async (id: string) => ({ ...state.stripePrices.get(id) }));
-  pricesCreate.mockReset().mockImplementation(async (input: Row) => { const price = { id: `price_${state.stripePrices.size}`, active: true, type: "one_time", livemode: false, ...input }; state.stripePrices.set(price.id, price); return { ...price }; });
+  pricesRetrieve.mockReset().mockImplementation(async (id: string, _params?: unknown, options?: { stripeAccount?: string }) => ({ ...state.stripePrices.get(scoped(id, options)) }));
+  pricesCreate.mockReset().mockImplementation(async (input: Row, options?: { stripeAccount?: string }) => { const price = { id: `price_${state.stripePrices.size}`, active: true, type: "one_time", livemode: false, ...input }; state.stripePrices.set(scoped(price.id, options), price); return { ...price }; });
   sessionsCreate.mockReset().mockImplementation(async (input: Row, options?: { idempotencyKey?: string }) => {
     const existing = [...state.sessions.values()].find((session) => options?.idempotencyKey && session._key === options.idempotencyKey);
     if (existing) return existing;
@@ -153,6 +179,10 @@ export function resetFakes() {
     state.sessions.set(session.id, session); return session;
   });
   sessionsRetrieve.mockReset().mockImplementation(async (id: string) => ({ ...state.sessions.get(id) }));
+  accountsRetrieve.mockReset().mockImplementation(async (id: string) => ({ id, type: "standard", country: "GB", charges_enabled: true, payouts_enabled: true, capabilities: { card_payments: "active" }, requirements: { currently_due: [] } }));
+  oauthToken.mockReset().mockResolvedValue({ stripe_user_id: "acct_seller", scope: "read_write", livemode: false });
+  oauthDeauthorize.mockReset().mockResolvedValue({ stripe_user_id: "acct_seller" });
+  oauthAuthorizeUrl.mockReset().mockImplementation((params: Record<string, string>) => `https://connect.stripe.com/oauth/authorize?${new URLSearchParams(params)}`);
   getUser.mockReset().mockResolvedValue({ data: { user: { id: OWNER_ID, email: "owner@example.com" } }, error: null });
   signIn.mockReset().mockResolvedValue({ data: { user: { id: OWNER_ID }, session: { access_token: "owner-token", expires_in: 3600 } }, error: null });
   signOut.mockReset().mockResolvedValue({ error: null });

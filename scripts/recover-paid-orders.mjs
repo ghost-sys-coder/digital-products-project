@@ -27,7 +27,13 @@ try {
     if (readError) throw new Error("Could not check existing orders.");
     if (existing) continue;
     // Read payment status from Stripe itself, never from browser input or a local fixture.
-    const session = await stripe.checkout.sessions.retrieve(checkout.stripe_session_id);
+    let connection = null;
+    if (checkout.payment_connection_id) {
+      const result = await db.from("payment_connections").select("*").eq("id", checkout.payment_connection_id).eq("store_id", STORE_ID).single();
+      if (result.error || !result.data || result.data.provider !== "stripe" || result.data.livemode) throw new Error("Could not resolve the sandbox checkout's payment account.");
+      connection = result.data;
+    }
+    const session = await stripe.checkout.sessions.retrieve(checkout.stripe_session_id, {}, connection ? { stripeAccount: connection.external_account_id } : {});
     if (session.payment_status !== "paid") continue;
     const matches = !session.livemode && session.mode === "payment" && session.id === checkout.stripe_session_id &&
       session.client_reference_id === checkout.id && session.metadata?.app === "veilcode-store" &&
@@ -40,6 +46,7 @@ try {
       const { error: insertError } = await db.from("orders").insert({
         stripe_session_id: session.id, store_id: STORE_ID, product_id: checkout.product_id,
         product_snapshot: checkout.product_snapshot, email: session.customer_details.email,
+        ...(connection ? { payment_connection_id: connection.id } : {}),
         amount_total: session.amount_total, currency: session.currency,
         download_token_hash: createHash("sha256").update(randomBytes(32)).digest("hex"),
         token_expires_at: new Date(Date.now() + 14 * 86400_000).toISOString(),

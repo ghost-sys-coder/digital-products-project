@@ -10,6 +10,8 @@ import { STORE_ID } from "./store-config";
 import type { CatalogProduct } from "./catalog.types";
 import { stripeProductDetails } from "./stripe-product-details";
 import { assertDownloadAvailable } from "./product-files";
+import { paymentContext } from "./payment-connections";
+import { syncConnectedProduct } from "./connected-stripe-products";
 
 const UPLOAD_LIMIT = 3 * 1024 * 1024; // Fits Vercel's function request-body limit with form overhead.
 export async function uploadProductFile(productId: string, file: File, cover: boolean) {
@@ -90,7 +92,12 @@ export async function saveProduct(form: FormData) {
   if (input.status === "published" && (!storage_path || !download_filename || !input.description || !input.tagline)) throw new HttpError(400, "To publish, add a description, short description, and downloadable file.");
   if (input.status === "published") await assertDownloadAvailable(storage_path, "The download is missing from Storage. Upload the actual PDF or ZIP before publishing.");
   let payment;
-  try { payment = await syncStripeProduct({ ...product, name: input.name, description: input.description, tagline: input.tagline, cover_path }, input); } catch (error) {
+  try {
+    const context = await paymentContext();
+    const updated = { ...product, name: input.name, description: input.description, tagline: input.tagline, cover_path, price_amount: input.price_amount, currency: input.currency };
+    if (context.accountId) { await syncConnectedProduct(updated, context); payment = {}; }
+    else payment = await syncStripeProduct(updated, input);
+  } catch (error) {
     if (error instanceof HttpError) throw error;
     throw new HttpError(502, "Stripe could not set up this product. Check your payment key and try saving again. Your draft is retained.");
   }

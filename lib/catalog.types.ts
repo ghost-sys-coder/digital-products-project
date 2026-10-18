@@ -22,4 +22,5 @@ export type Checkout = {
   stripe_price_id: string; amount: number; currency: string;
   product_slug: string;
   product_snapshot: DeliveryProduct; created_at: string;
+  payment_connection_id?: string | null; checkout_origin?: string | null;
 };

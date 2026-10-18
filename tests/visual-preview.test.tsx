@@ -17,6 +17,8 @@ import Home from "../app/page";
 import Dashboard from "../app/admin/page";
 import ProductPage from "../app/p/[slug]/page";
 import EditProduct from "../app/admin/products/[id]/page";
+import { AdminShell } from "../components/admin-shell";
+import { PaymentSettings } from "../components/payment-settings";
 
 it("renders real store and owner pages with an isolated catalog for browser review", async () => {
   resetFakes();
@@ -26,6 +28,8 @@ it("renders real store and owner pages with an isolated catalog for browser revi
     "dashboard.html": await Dashboard(),
     "product.html": await ProductPage({ params: Promise.resolve({ slug: product.slug }), searchParams: Promise.resolve({}) }),
     "editor.html": await EditProduct({ params: Promise.resolve({ id: product.id }), searchParams: Promise.resolve({}) }),
+    "payments.html": <AdminShell active="/admin/settings"><div className="admin-page-heading"><div><span className="eyebrow">MAKE YOURSELF AT HOME</span><h1>Store settings</h1><p>Manage where your sales land.</p></div></div><PaymentSettings enabled configured livemode={false} connection={{ accountId: "acct_exampleStore", status: "connected", country: "GB", requirementsCount: 0 }} /></AdminShell>,
+    "payments-setup.html": <AdminShell active="/admin/settings"><div className="admin-page-heading"><h1>Store settings</h1></div><PaymentSettings enabled={false} configured={false} livemode={false} connection={null} /></AdminShell>,
   };
   const css = await readFile(join(process.cwd(), "app/globals.css"), "utf8");
   const output = join(process.cwd(), ".preview");

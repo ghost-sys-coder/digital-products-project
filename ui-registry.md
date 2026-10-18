@@ -91,3 +91,28 @@ Last updated: 2026-10-18
 Selection is local until Save product. Clearing a selection restores the saved attachment. PDF previews use local object URLs; ZIPs show file details. Revoke object URLs when replaced, cleared, or unmounted. Disable selection controls while saving. Saved cover previews use an owner-authenticated, non-cacheable request, including draft products.
 
 The editor verifies saved downloads against Storage before showing the ready-for-delivery checkmark. A saved filename alone is insufficient. Missing objects show an associated inline error; verification outages show neutral, uncertain status. Snapshot FormData before disabling upload controls during save. The same availability helper protects publishing, checkout, and delivery.
+
+### Store payment connections
+
+Files: `components/payment-settings.tsx`, `app/admin/settings/page.tsx`, `app/globals.css`
+Last updated: 2026-10-18
+
+Use the existing white workspace panel, `--line` border, 10px panel corners, and form-panel spacing. Provider headings use 15px/600 text; the icon has a blue wash with 8px corners. Connection and environment labels use 11px text and 5px corners; connected status uses a muted green surface. Keep primary connect/reconnect, secondary status refresh, and the external Stripe Dashboard link together in a wrapping action row. Disconnect stays below a divider and requires an inline confirmation explaining the checkout pause. Status/error messages use `role=status`/`role=alert`; controls disable during requests. Account IDs wrap, and the same panel reflows without horizontal overflow on mobile. Never show a working connect button until the authorization and webhook settings are ready.
+
+### Workspace profile and sign-out confirmation
+
+Files: `components/admin-account-menu.tsx`, `components/admin-shell.tsx`, `components/ui/{avatar,dropdown-menu,alert-dialog}.tsx`, `app/admin-ui.css`
+Last updated: 2026-10-18
+
+| Property | Pattern |
+| --- | --- |
+| Components | Official shadcn Base UI avatar, dropdown menu, alert dialog, and existing button |
+| Surfaces | White popovers; `--line` border; soft shadow for elevated overlays |
+| Avatar | Circular blue wash, accent initials, 11px/650 text |
+| Typography | 14px/600 profile name, 12px email/actions, 10–11px supporting details; 21px dialog heading |
+| Spacing | 6px menu inset, 10px action inset; 26px dialog padding; 10px between actions |
+| Shape | 8px menu corners, 12px dialog corners, existing 8px buttons |
+| Interaction | Muted action hover; blue focus indicators; pending sign-out disables both actions |
+| Accessibility | Named avatar trigger; keyboard menu navigation; trapped dialog focus starts at cancel and returns to its trigger |
+
+Profile details come from the authenticated owner, with an email-name fallback when no display name exists. Only name, email, and initials reach the client; the owner role is fixed by the owner-only dashboard. Keep the profile beside Your storefront on desktop and mobile. Both sign-out entry points use the same confirmation component and existing same-origin POST endpoint. Utilities live in the admin stylesheet without Tailwind Preflight, preserving the existing global design. Respect reduced motion for overlays.

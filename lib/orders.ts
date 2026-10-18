@@ -18,10 +18,12 @@ export async function insertOrder(input: {
   amountTotal: number | null; currency: string | null;
   tokenHash: string; expiresAt: string;
   productSnapshot?: DeliveryProduct;
+  storeId?: string; connectionId?: string | null;
 }): Promise<{ order: Order; inserted: boolean }> {
   const { data, error } = await getSupabase().from("orders").insert({
     stripe_session_id: input.sessionId,
-    store_id: STORE_ID,
+    store_id: input.storeId ?? STORE_ID,
+    ...(input.connectionId ? { payment_connection_id: input.connectionId } : {}),
     product_snapshot: input.productSnapshot ?? null,
     product_id: input.productId,
     email: input.email,
@@ -36,7 +38,7 @@ export async function insertOrder(input: {
   if (error?.code === "23505") {
     // Only an existing session is a replay; a token collision is an error.
     const order = await findOrder(input.sessionId);
-    if (order) return { order, inserted: false };
+    if (order && order.store_id === (input.storeId ?? STORE_ID) && (order.payment_connection_id ?? null) === (input.connectionId ?? null)) return { order, inserted: false };
   }
   throw new Error("Could not insert order");
 }

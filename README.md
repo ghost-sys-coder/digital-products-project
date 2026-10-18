@@ -181,6 +181,27 @@ The starter dependency graph has existing npm audit findings in shadcn/ESLint's 
 
 ## Deploy and go live
 
+### Stripe account connections
+
+The owner can link an existing independent Stripe account in **Store settings → Payments**. The initial release still has one owner/store; creator signup, store switching, custom storefront domains, and PayPal are not enabled. No platform transaction fee is charged.
+
+1. Apply `supabase/migrations/20261018115534_store_payment_connections.sql` before deploying the Connect code. This migration is already applied to the configured VeilCode Supabase project. It preserves existing orders and platform-account references.
+2. In the UK platform's Stripe Connect OAuth settings, register the exact callback `https://pod.veilcode.studio/api/admin/payments/stripe/callback`. Add `http://localhost:3000/api/admin/payments/stripe/callback` separately for local testing if needed. Copy the client ID for the same Stripe mode as the API key into `STRIPE_CONNECT_CLIENT_ID`.
+3. Register a **connected-account** webhook at `https://pod.veilcode.studio/api/stripe-connect-webhook`, using API version `2026-09-30.endive`, subscribed to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `account.updated`, and `account.application.deauthorized`. Put its signing secret in `STRIPE_CONNECT_WEBHOOK_SECRET`; keep the original platform webhook and `STRIPE_WEBHOOK_SECRET`. The sandbox Connect endpoint and production secret are already configured for the current deployment.
+4. Set `STRIPE_CONNECT_ENABLED=true` only when the client ID, callback, and webhook are configured, then deploy. The current test-mode deployment is configured: OAuth is enabled, both callbacks are registered, and the client ID and enabled flag are saved locally and in Vercel Production. Disabling this switch later only disables connection-management actions: an existing connected account is never silently replaced by the platform account.
+5. In the owner dashboard, choose **Connect Stripe** and complete authorization yourself. Use a separate independent seller account; the platform account continues serving its own store without connecting to itself. No raw seller API keys or OAuth access tokens are stored. Check status to refresh account readiness. Stripe must permit card payments and payouts before new checkout is accepted.
+6. Complete a sandbox authorization and purchase/delivery acceptance check before enabling live connections. Test/live connection rows and product references are separate. Switching live payment mode requires a live client ID, live connected-account webhook secret, and live account authorization.
+
+Product/Price references belong to their connected account. Checkouts and orders retain their original payment connection, so switching accounts does not rewrite purchases. Disconnecting pauses new checkout and retains existing orders and downloads. Paid historical sessions can still fulfill after switching accounts. Buyers use Stripe-hosted Checkout; refunds, disputes, and payouts are managed in the seller's full Stripe Dashboard.
+
+Local `npm run stripe:listen` now forwards platform and connected-account events to their separate routes and writes both local signing secrets. Keep local and deployed testing in separate Stripe sandboxes; do not copy CLI signing secrets into Vercel. New application checkout reservations also retain their origin, preventing the localhost worker from delivering purchases reserved on the deployed origin.
+
+`npm run orders:recover` remains sandbox-only and never sends email; it now resolves the account associated with each checkout before retrieving missed payments. The SQL integration probe in `supabase/tests/payment_connections.sql` verifies ownership, account history, and cross-store constraints inside a rolled-back transaction.
+
+References: [Stripe Connect OAuth](https://docs.stripe.com/connect/oauth-reference), [direct charges](https://docs.stripe.com/connect/direct-charges?platform=web&ui=stripe-hosted), [Connect webhooks](https://docs.stripe.com/connect/webhooks).
+
+### Current store launch
+
 1. Apply the migration to the intended Supabase project, create the private bucket, and create/configure the owner Auth user.
 2. Deploy to Vercel with Node.js 22+ and complete environment variables. Set `APP_URL` to the public HTTPS origin. Ensure checkout/webhook routes are reachable without deployment authentication. Keep preview and production payment environments separate.
    The public store needs its own Stripe webhook endpoint at `https://your-store-domain/api/stripe-webhook` and that endpoint's signing secret. The Stripe CLI forwarding secret is only for localhost. Stop local forwarding when testing the deployed store against the same Stripe sandbox; otherwise the local process can deliver the email first with a localhost link. Use separate Stripe sandboxes for simultaneous local and deployed testing. Changing a Vercel environment variable requires a new deployment before the running app uses it.

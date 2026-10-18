@@ -17,10 +17,11 @@ if (!["localhost", "127.0.0.1", "[::1]"].includes(origin.hostname) || !["http:",
   throw new Error("Set APP_URL to your localhost origin before starting local forwarding.");
 }
 const target = new URL("/api/stripe-webhook", origin).toString();
+const connectTarget = new URL("/api/stripe-connect-webhook", origin).toString();
 const listenerArgs = [
-  "listen", "--skip-update", "--color", "off", "--events-from", "@self",
-  "--events", "checkout.session.completed,checkout.session.async_payment_succeeded",
-  "--forward-to", target,
+  "listen", "--skip-update", "--color", "off", "--events-from", "all",
+  "--events", "checkout.session.completed,checkout.session.async_payment_succeeded,account.updated,account.application.deauthorized",
+  "--forward-to", target, "--forward-connect-to", connectTarget,
 ];
 const windows = process.platform === "win32";
 const listener = spawn(windows ? "cmd.exe" : "stripe", windows ? ["/d", "/s", "/c", `stripe ${listenerArgs.join(" ")}`] : listenerArgs, {
@@ -40,12 +41,14 @@ function handleLine(line) {
     savedSecret = secret;
     updating = updating.then(async () => {
       const source = await readFile(envPath, "utf8");
-      const value = `STRIPE_WEBHOOK_SECRET=${secret}`;
-      const updated = /^STRIPE_WEBHOOK_SECRET=.*$/m.test(source)
-        ? source.replace(/^STRIPE_WEBHOOK_SECRET=.*$/m, value)
-        : `${source.trimEnd()}\n${value}\n`;
+      let updated = source;
+      for (const name of ["STRIPE_WEBHOOK_SECRET", "STRIPE_CONNECT_WEBHOOK_SECRET"]) {
+        const value = `${name}=${secret}`;
+        const pattern = new RegExp(`^${name}=.*$`, "m");
+        updated = pattern.test(updated) ? updated.replace(pattern, value) : `${updated.trimEnd()}\n${value}\n`;
+      }
       if (updated !== source) await writeFile(envPath, updated);
-      console.log("Local webhook signing secret configured in .env.local (value hidden).");
+      console.log("Local platform and Connect webhook signing secrets configured in .env.local (values hidden).");
       console.log("Keep this listener running for test purchases. Restart Next.js if it does not reload .env.local.");
     }).catch(() => {
       console.error("Could not update .env.local. Stop the listener and check file permissions.");

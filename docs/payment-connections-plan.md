@@ -1,6 +1,6 @@
 # Store payment connections
 
-Research date: 2026-10-18. This is a proposed implementation plan; no payment configuration, account responsibilities, fees, or checkout routing have been changed.
+Research date: 2026-10-18. The first implementation now includes existing-account OAuth linking, a Payments panel, account-scoped Stripe products/prices/checkout, separate Connect webhooks, historical account references, and a server-only connection schema. The migration and test-mode Connect webhook are configured. Test-mode OAuth and both approved callbacks are enabled for VeilCode Studio, and linking is enabled in the deployed app. Owner authorization and a connected-account purchase/delivery acceptance check remain; no store has been switched or charged a platform fee.
 
 ## Proposed business model
 
@@ -8,7 +8,7 @@ Independent creators sell through their own storefronts. Each creator would be t
 
 Use Stripe Connect with direct charges for this model. Recommend full Stripe Dashboard access, Stripe collecting processing fees directly from connected accounts, and Stripe responsible for connected-account negative balances. The platform remains responsible for its own negative balances. This combination is supported by the Connect integration recommendations. [Stripe configuration guidance](https://docs.stripe.com/connect/integration-recommendations)
 
-The owner confirmed that the Stripe account/business is based in the UK. Intended seller countries, onboarding route, and platform monetization remain decisions to confirm. Do not activate Connect or set fees as part of this research.
+The owner confirmed that the Stripe account/business is based in the UK and chose existing-account linking. The first release retains the single-owner store and charges no platform fee. Public creator onboarding, intended seller countries, and platform monetization remain later decisions.
 
 ## Store owner experience
 
@@ -26,7 +26,7 @@ Do not request a creator's secret API key. The application keeps its own platfor
 - For new connected accounts, evaluate Accounts v2 with embedded or Stripe-hosted onboarding. OAuth currently requires Accounts v1, so choosing account provisioning and linking behavior is an explicit implementation decision. Do not silently assume the same onboarding flow supports both or change the existing Stripe API version. [Accounts v2 limitations](https://docs.stripe.com/connect/accounts-v2)
 - Disconnection must stop new checkout creation. Existing paid orders retain their original payment connection and delivery records.
 
-## Current application findings
+## Original application findings
 
 - `lib/stripe.ts` creates one server Stripe client from the environment.
 - `lib/manage-products.ts` and `lib/checkout.ts` create products, prices, and sessions in that account without a connected-account context.

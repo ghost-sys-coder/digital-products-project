@@ -7,6 +7,8 @@ vi.mock("stripe", async () => {
     products = { retrieve: fakes.productsRetrieve, create: fakes.productsCreate, update: fakes.productsUpdate };
     prices = { retrieve: fakes.pricesRetrieve, create: fakes.pricesCreate };
     checkout = { sessions: { create: fakes.sessionsCreate, retrieve: fakes.sessionsRetrieve } };
+    accounts = { retrieve: fakes.accountsRetrieve };
+    oauth = { authorizeUrl: fakes.oauthAuthorizeUrl, token: fakes.oauthToken, deauthorize: fakes.oauthDeauthorize };
   } };
 });
 vi.mock("@supabase/supabase-js", async () => {
@@ -30,4 +32,7 @@ beforeEach(() => {
   vi.stubEnv("L2K_TEMPLATES_URL", "https://drive.google.com/drive/folders/templates");
   vi.stubEnv("ADMIN_SECRET", "a-long-test-admin-secret");
   vi.stubEnv("OWNER_USER_ID", "975ac870-5ab8-43a5-9d70-c051c42fc61f");
+  vi.stubEnv("STRIPE_CONNECT_ENABLED", "false");
+  vi.stubEnv("STRIPE_CONNECT_CLIENT_ID", "ca_testApplication");
+  vi.stubEnv("STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_connected");
 });
