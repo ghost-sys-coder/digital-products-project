@@ -92,6 +92,15 @@ Selection is local until Save product. Clearing a selection restores the saved a
 
 The editor verifies saved downloads against Storage before showing the ready-for-delivery checkmark. A saved filename alone is insufficient. Missing objects show an associated inline error; verification outages show neutral, uncertain status. Snapshot FormData before disabling upload controls during save. The same availability helper protects publishing, checkout, and delivery.
 
+PDF/ZIP selection now allows 5 MB; covers retain 3 MB. Keep limits and messages sourced from `lib/upload-limits.ts`. Selected files upload through scoped private Storage URLs during Save product, with explicit uploading/saving labels; the final form contains receipts rather than file bodies.
+
+### Product save notifications
+
+Files: `components/ui/sonner.tsx`, `components/product-editor.tsx`, `app/admin/layout.tsx`
+Last updated: 2026-10-18
+
+Use the shadcn Sonner component once in the admin layout, at the top right, with four-second success notifications and a close button. Match existing white background, foreground text, `--line` border, and 10px corners. Use a check icon, a brief title (Product created or Product saved), and supporting copy that accurately distinguishes draft from published status. Keep focus in the editor; notifications must not interrupt typing or require confirmation. Let hover/focus pause dismissal for accessibility. Trigger only after a successful API response, before navigating; the shared layout preserves the notification across that navigation.
+
 ### Store payment connections
 
 Files: `components/payment-settings.tsx`, `app/admin/settings/page.tsx`, `app/globals.css`

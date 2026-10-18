@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   try {
     sameOrigin(req);
     await requireOwner();
-    if (Number(req.headers.get("content-length")) > 4_000_000) throw new HttpError(413, "Keep the combined upload size below 3.8 MB per save.");
+    if (Number(req.headers.get("content-length")) > 4_000_000) throw new HttpError(413, "This save is too large. Reload the editor to use direct file uploads.");
     const product = await saveProduct(await req.formData());
     return Response.json({ ok: true, id: product.id, revision: product.revision }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return apiError(error); }

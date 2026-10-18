@@ -12,24 +12,15 @@ import { stripeProductDetails } from "./stripe-product-details";
 import { assertDownloadAvailable } from "./product-files";
 import { paymentContext } from "./payment-connections";
 import { syncConnectedProduct } from "./connected-stripe-products";
+import { inspectProductFile, resolveProductUpload, validateUploadSize } from "./product-uploads";
 
-const UPLOAD_LIMIT = 3 * 1024 * 1024; // Fits Vercel's function request-body limit with form overhead.
 export async function uploadProductFile(productId: string, file: File, cover: boolean) {
-  if (file.size > UPLOAD_LIMIT) throw new HttpError(400, "Each upload must be 3 MB or smaller.");
+  const { extension, contentType, filename } = await inspectProductFile(file, file.name, cover ? "cover" : "download");
   const bytes = new Uint8Array(await file.arrayBuffer());
-  let extension: string;
-  let contentType: string;
-  if (cover && bytes[0] === 0x89 && Buffer.from(bytes.slice(1, 4)).toString() === "PNG") { extension = "png"; contentType = "image/png"; }
-  else if (cover && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) { extension = "jpg"; contentType = "image/jpeg"; }
-  else if (cover && Buffer.from(bytes.slice(0, 4)).toString() === "RIFF" && Buffer.from(bytes.slice(8, 12)).toString() === "WEBP") { extension = "webp"; contentType = "image/webp"; }
-  else if (!cover && Buffer.from(bytes.slice(0, 5)).toString() === "%PDF-") { extension = "pdf"; contentType = "application/pdf"; }
-  else if (!cover && bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) { extension = "zip"; contentType = "application/zip"; }
-  else throw new HttpError(400, cover ? "Upload a PNG, JPEG, or WebP cover." : "Upload a PDF or ZIP download.");
   const path = `${STORE_ID}/${productId}/${cover ? "covers" : "downloads"}/${randomUUID()}.${extension}`;
   const { error } = await getSupabase().storage.from(getEnv().SUPABASE_BUCKET).upload(path, bytes, { contentType, upsert: false });
   if (error) throw new HttpError(503, "The upload failed. Check the private Storage bucket and try again.");
-  const stem = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 100) || "download";
-  return { path, contentType, filename: `${stem}.${extension}` };
+  return { path, contentType, filename };
 }
 
 async function syncStripeProduct(product: CatalogProduct, input: ReturnType<typeof parseProductInput>) {
@@ -80,7 +71,21 @@ export async function saveProduct(form: FormData) {
   const file = form.get("download");
   const cover = form.get("cover");
   // Validate both sizes before making any upload.
-  if ([file, cover].some((value) => value instanceof File && value.size > UPLOAD_LIMIT)) throw new HttpError(400, "Each upload must be 3 MB or smaller.");
+  for (const [value, kind] of [[file, "download"], [cover, "cover"]] as const) {
+    if (value instanceof File && value.size) validateUploadSize(value.size, kind);
+  }
+  const downloadUpload = form.get("download_upload");
+  const coverUpload = form.get("cover_upload");
+  if ((downloadUpload && typeof downloadUpload !== "string") || (coverUpload && typeof coverUpload !== "string")) throw new HttpError(400, "Invalid upload receipt.");
+  if ((downloadUpload && file instanceof File && file.size) || (coverUpload && cover instanceof File && cover.size)) throw new HttpError(400, "Submit only one upload per file.");
+  if (typeof downloadUpload === "string" && downloadUpload) {
+    const uploaded = await resolveProductUpload(downloadUpload, product.id, input.revision, "download");
+    storage_path = uploaded.path; download_filename = uploaded.filename;
+  }
+  if (typeof coverUpload === "string" && coverUpload) {
+    const uploaded = await resolveProductUpload(coverUpload, product.id, input.revision, "cover");
+    cover_path = uploaded.path; cover_type = uploaded.contentType;
+  }
   if (file instanceof File && file.size) {
     const uploaded = await uploadProductFile(product.id, file, false);
     storage_path = uploaded.path; download_filename = uploaded.filename;

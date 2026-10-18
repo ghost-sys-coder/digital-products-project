@@ -4,8 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { CheckCircle2, FileArchive, FileText, ImageIcon, Upload, X } from "lucide-react";
 import type { DownloadAvailability } from "@/lib/product-files";
-
-const MAX_FILE_SIZE = 3 * 1024 * 1024;
+import { productUploadLimit, productUploadLimitLabel } from "@/lib/upload-limits";
 
 type Selection = { file: File; url: string | null };
 
@@ -46,14 +45,14 @@ export function ProductUploadField({ kind, existingName, existingCover, existing
     <label htmlFor={id} className={`upload-field ${selection || attached ? "has-file" : ""} ${error ? "has-error" : ""}`}>
       {cover && preview ? <Image className="upload-cover-preview" src={preview} alt={selection ? "Selected product cover preview" : "Current product cover"} width={640} height={400} unoptimized /> : <span className="upload-file-icon"><Icon size={28} aria-hidden="true" /></span>}
       <strong>{selection?.file.name ?? (cover ? (attached ? "Current product cover" : "Add a product cover") : (existingName || "Add your digital download"))}</strong>
-      {selection ? <span>{fileType} · {selection.file.size < 1024 * 1024 ? `${Math.max(1, Math.round(selection.file.size / 1024))} KB` : `${(selection.file.size / (1024 * 1024)).toFixed(2)} MB`}</span> : <span>{cover ? "PNG, JPEG, or WebP" : "PDF or ZIP"} · up to 3 MB</span>}
+      {selection ? <span>{fileType} · {selection.file.size < 1024 * 1024 ? `${Math.max(1, Math.round(selection.file.size / 1024))} KB` : `${(selection.file.size / (1024 * 1024)).toFixed(2)} MB`}</span> : <span>{cover ? "PNG, JPEG, or WebP" : "PDF or ZIP"} · up to {productUploadLimitLabel(kind)}</span>}
       <span className="upload-action"><Upload size={14} aria-hidden="true" />{selection || attached ? "Choose a different file" : "Choose file"}</span>
       <input ref={input} id={id} name={kind} type="file" disabled={disabled} accept={cover ? "image/png,image/jpeg,image/webp" : ".pdf,.zip"} aria-describedby={`${id}-status${error ? ` ${id}-error` : ""}`} aria-invalid={Boolean(error)} aria-label={cover ? "Product cover" : "Digital download"} onChange={(event) => {
         const field = event.currentTarget;
         const file = field.files?.[0];
         if (!file) { clearSelection(); return; }
         const supported = cover ? /\.(png|jpe?g|webp)$/i.test(file.name) : /\.(pdf|zip)$/i.test(file.name);
-        const message = !supported ? (cover ? "Choose a PNG, JPEG, or WebP image." : "Choose a PDF or ZIP file.") : file.size === 0 ? "This file is empty. Choose a different file." : file.size > MAX_FILE_SIZE ? "This file is larger than 3 MB. Choose a smaller file." : "";
+        const message = !supported ? (cover ? "Choose a PNG, JPEG, or WebP image." : "Choose a PDF or ZIP file.") : file.size === 0 ? "This file is empty. Choose a different file." : file.size > productUploadLimit(kind) ? `This file is larger than ${productUploadLimitLabel(kind)}. Choose a smaller file.` : "";
         field.setCustomValidity(message);
         setError(message);
         if (message) { field.value = ""; setSelection(null); return; }

@@ -102,6 +102,8 @@ export const signUrl = vi.fn();
 export const upload = vi.fn();
 export const storageDownload = vi.fn();
 export const storageExists = vi.fn();
+export const signedUpload = vi.fn();
+export const storageInfo = vi.fn();
 export const rpc = vi.fn(async (name: string, args: Row) => {
   if (state.dbError) return { data: null, error: { code: "08000" } };
   if (name === "activate_payment_connection") {
@@ -134,7 +136,7 @@ export const signIn = vi.fn();
 export const signOut = vi.fn();
 export const supabase = {
   from: vi.fn((table: string) => new Query(table)), rpc,
-  storage: { from: vi.fn(() => ({ createSignedUrl: signUrl, upload, download: storageDownload, exists: storageExists })) },
+  storage: { from: vi.fn(() => ({ createSignedUrl: signUrl, createSignedUploadUrl: signedUpload, info: storageInfo, upload, download: storageDownload, exists: storageExists })) },
   auth: { getUser, signInWithPassword: signIn, signOut },
 };
 export const sendEmail = vi.fn();
@@ -161,6 +163,8 @@ export function resetFakes() {
   upload.mockReset().mockResolvedValue({ data: { path: "uploaded" }, error: null });
   storageDownload.mockReset().mockResolvedValue({ data: new Blob(["image"]), error: null });
   storageExists.mockReset().mockResolvedValue({ data: true, error: null });
+  signedUpload.mockReset().mockImplementation(async (path: string) => ({ data: { path, signedUrl: "https://example.supabase.co/storage/v1/object/upload/sign/example?token=fixture", token: "fixture" }, error: null }));
+  storageInfo.mockReset().mockResolvedValue({ data: { size: 5, contentType: "application/pdf" }, error: null });
   constructEvent.mockReset().mockImplementation((body: string) => JSON.parse(body));
   const scoped = (id: string, options?: { stripeAccount?: string }) => options?.stripeAccount ? `${options.stripeAccount}:${id}` : id;
   productsRetrieve.mockReset().mockImplementation(async (id: string, _params?: unknown, options?: { stripeAccount?: string }) => { const product = state.stripeProducts.get(scoped(id, options)); if (!product) throw { code: "resource_missing" }; return { ...product }; });
