@@ -8,7 +8,7 @@ Independent creators sell through their own storefronts. Each creator would be t
 
 Use Stripe Connect with direct charges for this model. Recommend full Stripe Dashboard access, Stripe collecting processing fees directly from connected accounts, and Stripe responsible for connected-account negative balances. The platform remains responsible for its own negative balances. This combination is supported by the Connect integration recommendations. [Stripe configuration guidance](https://docs.stripe.com/connect/integration-recommendations)
 
-Country eligibility, onboarding route, and platform monetization remain decisions to confirm. The account's business country cannot be inferred from the owner's location or timezone. Do not activate Connect or set fees as part of this research.
+The owner confirmed that the Stripe account/business is based in the UK. Intended seller countries, onboarding route, and platform monetization remain decisions to confirm. Do not activate Connect or set fees as part of this research.
 
 ## Store owner experience
 

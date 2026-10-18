@@ -23,6 +23,9 @@ export function getEnv() {
       throw new ConfigurationError(name, "must be a valid URL");
     }
     const local = name === "APP_URL" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    if (local && (process.env.VERCEL === "1" || /^(sk|rk)_live_/.test(env.STRIPE_SECRET_KEY))) {
+      throw new ConfigurationError("APP_URL", "must be a public HTTPS origin on Vercel or when accepting live payments");
+    }
     if ((url.protocol !== "https:" && !(local && url.protocol === "http:")) || url.username || url.password) {
       throw new ConfigurationError(name, "must be an HTTPS URL");
     }

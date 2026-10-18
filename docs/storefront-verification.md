@@ -72,3 +72,10 @@ This build did not apply the migration to a remote database or create an Auth ac
 - Both recovered orders remain pending. Customer delivery emails have not been sent; explicit authorization to send is still outstanding.
 
 The app retains the previously documented cross-service delivery uncertainty: a lost Resend response or failed sent-state write can lead to a new-token email on retry. Gross order metrics exclude refund/dispute synchronization. Larger files, audience campaigns, visitor attribution, and multi-creator onboarding remain later work from the research roadmap.
+
+### Deployed-store localhost delivery correction
+
+- Confirmed the Vercel project `veilcode-digital-store` has `APP_URL=https://pod.veilcode.studio`. The production app and the still-running local forwarder used the same UK Stripe sandbox, with no registered webhook endpoint; Vercel also had the local CLI signing secret. The three recent delivered emails contained localhost download origins.
+- Stopped the identified local forwarding processes. Created the sandbox endpoint at `https://pod.veilcode.studio/api/stripe-webhook` for both checkout success events, updated the production signing secret without logging it, and rebuilt the existing production deployment. A signed non-payment probe returned 200 using the new secret and 400 with the old CLI secret; it created no order and sent no email.
+- Verified all three existing emailed tokens still match their order records, remain within lifetime/count limits, and reference existing files. Changing only the origin to the public store preserves those links. No download allowance was consumed and no replacement emails were sent.
+- Added a configuration guard rejecting localhost URLs on Vercel or with live Stripe keys, with regression coverage. All 84 tests, lint, and production build passed locally. The deployed store still uses Stripe sandbox payments; live payment activation remains separate work.

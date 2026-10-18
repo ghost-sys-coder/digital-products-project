@@ -183,6 +183,8 @@ The starter dependency graph has existing npm audit findings in shadcn/ESLint's 
 
 1. Apply the migration to the intended Supabase project, create the private bucket, and create/configure the owner Auth user.
 2. Deploy to Vercel with Node.js 22+ and complete environment variables. Set `APP_URL` to the public HTTPS origin. Ensure checkout/webhook routes are reachable without deployment authentication. Keep preview and production payment environments separate.
+   The public store needs its own Stripe webhook endpoint at `https://your-store-domain/api/stripe-webhook` and that endpoint's signing secret. The Stripe CLI forwarding secret is only for localhost. Stop local forwarding when testing the deployed store against the same Stripe sandbox; otherwise the local process can deliver the email first with a localhost link. Use separate Stripe sandboxes for simultaneous local and deployed testing. Changing a Vercel environment variable requires a new deployment before the running app uses it.
+   The app rejects a localhost `APP_URL` on Vercel or with a live Stripe key. Local sandbox development still permits localhost.
 3. Verify the complete flow in test mode, including inbox delivery, file contents, resends, and replays.
 4. When ready, switch to the live Stripe key and create the live webhook endpoint with both event subscriptions and the pinned API version. Set its live signing secret.
 5. Restart/redeploy, then **save each product in the dashboard using the live key** to create its live Product/Price before accepting sales. Verify the public price and complete a controlled live purchase. Old test Price IDs cannot be used with live keys.

@@ -34,6 +34,25 @@ describe("configuration and token safety", () => {
     expect(a.token).not.toBe(b.token);
   });
 
+  it("rejects local delivery origins on Vercel", () => {
+    vi.stubEnv("VERCEL", "1");
+    for (const origin of ["http://localhost:3000", "https://127.0.0.1", "http://[::1]:3000"]) {
+      vi.stubEnv("APP_URL", origin);
+      expect(() => buildDeliveryEmail(PRODUCTS["lead-to-kickoff"], "test-token")).toThrow("APP_URL");
+    }
+    vi.stubEnv("APP_URL", "https://pod.veilcode.studio");
+    expect(buildDeliveryEmail(PRODUCTS["lead-to-kickoff"], "test-token").text)
+      .toContain("https://pod.veilcode.studio/api/download?token=test-token");
+  });
+
+  it("rejects local delivery origins with a live Stripe key", () => {
+    vi.stubEnv("APP_URL", "http://localhost:3000");
+    for (const key of ["sk_live_example", "rk_live_example"]) {
+      vi.stubEnv("STRIPE_SECRET_KEY", key);
+      expect(() => buildDeliveryEmail(PRODUCTS["lead-to-kickoff"], "test-token")).toThrow("APP_URL");
+    }
+  });
+
   it("mirrors delivery links and limits in HTML and text", () => {
     vi.stubEnv("L2K_TEMPLATES_URL", "https://drive.google.com/drive/folders/templates?a=1&b=2");
     const email = buildDeliveryEmail(PRODUCTS["lead-to-kickoff"], "test-token");
