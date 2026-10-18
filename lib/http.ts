@@ -1,0 +1,34 @@
+import "server-only";
+import { getEnv, ConfigurationError } from "./env";
+
+export class HttpError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+export function sameOrigin(req: Request) {
+  if (req.headers.get("origin") !== new URL(getEnv().APP_URL).origin) {
+    throw new HttpError(403, "Please submit this form from the store.");
+  }
+}
+export function apiError(error: unknown) {
+  if (!(error instanceof HttpError)) console.error(error instanceof ConfigurationError ? error.message : "Store request failed");
+  return Response.json({ error: error instanceof HttpError ? error.message : "Something went wrong. Please try again." }, {
+    status: error instanceof HttpError ? error.status : 500,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+export async function jsonObject(req: Request): Promise<Record<string, unknown>> {
+  if (Number(req.headers.get("content-length")) > 16000) throw new HttpError(413, "Request is too large.");
+  try {
+    const body: unknown = await req.json();
+    if (body && typeof body === "object" && !Array.isArray(body)) return body as Record<string, unknown>;
+  } catch { /* handled below */ }
+  throw new HttpError(400, "Provide a valid JSON object.");
+}
+export function validHttps(value: string, label: string) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol === "https:" && !url.username && !url.password && value.length <= 2000) return url.toString();
+  } catch { /* handled below */ }
+  throw new HttpError(400, `${label} must be a valid HTTPS URL.`);
+}

@@ -1,36 +1,191 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VeilCode Studio shop
 
-## Getting Started
+A single-owner digital product store built with Next.js App Router, TypeScript, Supabase, Stripe, and Resend. Create products, set prices, upload downloads, and publish from `/admin`. Buyers browse `/`, open `/p/<slug>`, and pay through a Stripe Checkout Session created by the application. **No Stripe Payment Links are needed.**
 
-First, run the development server:
+## What is included
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Public storefront and product pages with a responsive light theme.
+- Owner login, product editor, private PDF/ZIP and image uploads, draft/publish controls, price and currency editing, and display ordering.
+- Automatic Stripe Product/Price creation. Changing the amount creates a new immutable Stripe Price; old purchases keep their original amount.
+- Individual hosted Checkout Sessions created server-side, with idempotency and a saved purchase snapshot.
+- Signed webhooks for paid immediate/asynchronous checkouts, secure delivery emails, 14-day download tokens, five-download limit, and 60-second private Storage URLs.
+- Dashboard, recent orders, gross sales grouped by currency, CSV export, corrected-email support resends, and storefront settings.
+- Internal store ownership, ready to extend later. There is one configured owner; no public seller signup or connected-account payout system.
+
+The detailed current scope is in `docs/storefront-build.md`. The research roadmap in `docs/stan-style-store-research.md` describes later audience, analytics, and platform work; its earlier Payment Link recommendation is superseded by the owner request and this implementation.
+
+## 1. Install and configure
+
+Use Node.js 22.12+ and npm:
+
+```sh
+npm install
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+On PowerShell, use `Copy-Item .env.example .env.local` only if you do not already have local secrets. Set the variables in your existing `.env.local` instead of overwriting it.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Value |
+| --- | --- |
+| `APP_URL` | `http://localhost:3000` locally; your HTTPS app origin on Vercel, with no path/query/fragment |
+| `STRIPE_SECRET_KEY` | Your account's Stripe test/sandbox secret or appropriately permissioned restricted key |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret for the local listener or deployed webhook endpoint |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only service role key |
+| `SUPABASE_BUCKET` | Private bucket name, normally `products` |
+| `RESEND_API_KEY` | Resend key permitted to send from the verified mail domain |
+| `OWNER_USER_ID` | The UUID of your permitted Supabase Auth user |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Optional legacy variables: `ADMIN_SECRET` enables the old header-authenticated `/api/admin/resend` support endpoint. `STRIPE_PAYMENT_LINK_ID_L2K` allows outstanding old Payment Link checkouts to be fulfilled. `L2K_TEMPLATES_URL` supports old Lead to Kickoff purchases and prefills the seeded product's resource URL. These are not needed for application-created products and checkouts.
 
-## Learn More
+Required service configuration is validated at first use; owner configuration is validated when authentication needs it. Builds do not need service access. Never prefix secret variables with `NEXT_PUBLIC_`. All database/payment/email clients use Next.js's server-only guard.
 
-To learn more about Next.js, take a look at the following resources:
+## 2. Apply the Supabase migrations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+For the SQL Editor setup used by this project, run the files in this order:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. `supabase/migrations/001_orders.sql` — original order table and delivery/download functions.
+2. `supabase/migrations/20261018060336_storefront_catalog.sql` — store, products, checkout reservations, order ownership/snapshots, and the extended download function.
 
-## Deploy on Vercel
+If you already ran `001_orders.sql`, **run only the new storefront migration**. Each file is a transaction and is intended to run once. Do not drop existing tables or rerun the initial migration to upgrade. The new migration preserves original order rows, seeds one VeilCode store, and adds Lead to Kickoff as a **draft** without a hard-coded price or Stripe ID.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+In the Supabase dashboard, open the intended project → SQL Editor → new query, paste the entire file, and run it. Confirm `stores`, `products`, `checkouts`, and `orders` exist. All are protected by RLS, with no `anon`/`authenticated` grants or policies; the application server controls public catalog data and owner access. RPC execution is limited to the service role.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+SQL Editor execution does not update the CLI migration-history table. If adopting CLI-managed migrations later, reconcile the manual history first instead of running `db push` blindly. The original filename `001_orders.sql` is retained for compatibility with the original delivery brief.
+
+Create a **private** Storage bucket named `products`. Keep public object access disabled. Existing Lead to Kickoff purchases expect `lead-to-kickoff/lead-to-kickoff.pdf`; upload that PDF there if you have not already. New files are uploaded by the editor into store/product-scoped paths. Cover images are served through a route that only exposes published products; paid downloads never use a public object URL.
+
+## 3. Create your owner account
+
+1. In Supabase → Authentication → Users, create your owner user with an email and a strong password. Confirm the email when creating it, or complete the provider's confirmation flow.
+2. Copy that user's UUID into `OWNER_USER_ID`.
+3. Keep public signups disabled for this owner-only release. There is no signup page in the app.
+4. Restart the app after environment changes and visit `/admin/login`.
+
+The server verifies the access token with `auth.getUser(token)` on every protected request and compares the user ID against `OWNER_USER_ID`. Knowing an email address, a route URL, or user-editable metadata grants no access. Sessions are stored in HTTP-only, same-site cookies and expire after at most one hour. Sign in again when prompted; refresh tokens are not stored in this release. Login and other browser mutations require an Origin matching `APP_URL`.
+
+The first successful login records the configured owner UUID on the seeded store. This deployment remains single-owner even though data has store ownership fields.
+
+## 4. Configure payments and email
+
+Use your own existing Stripe account; Connect is not needed for your own product sales. The SDK API version is explicitly pinned to `2026-09-30.endive` in `lib/stripe.ts`.
+
+For a deployed test environment, create a public webhook endpoint at `${APP_URL}/api/stripe-webhook` for:
+
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+
+Choose the matching API version, use events from your own account, and copy the endpoint secret to `STRIPE_WEBHOOK_SECRET`. Stripe keys need access to create/retrieve/update Products, create/retrieve Prices, and create/retrieve Checkout Sessions. A suitably scoped restricted key can be used instead of a broad secret key.
+
+Verify Resend can send from `VeilCode Studio <orders@mail.veilcode.studio>`. Delivery email replies currently go to `support@veilcode.studio`; changing the storefront support field does not reconfigure the verified email sender or reply-to. No marketing broadcasts are sent by this app.
+
+## 5. Create and publish a product
+
+```sh
+npm run dev
+```
+
+Sign in at `/admin`, open **Products**, and choose **Add a product** or edit the seeded Lead to Kickoff draft.
+
+1. Enter the name, URL slug, short/full descriptions, and included items.
+2. Upload one PDF or ZIP. For multiple resources, package them in a ZIP. Add an optional HTTPS template/resource folder URL; it will be delivered in the email.
+3. Upload an optional PNG, JPEG, or WebP cover. Without one, the storefront uses a simple typographic studio cover.
+4. Set your amount and choose USD, GBP, EUR, CAD, or AUD. These supported currencies use two decimal places.
+5. Save as draft or choose **Published**, then save. Publishing requires descriptions, an attached download, and successfully created Stripe product/price references.
+6. Open the public product link. The buy button creates a unique Checkout Session automatically. There is no Payment Link setup step.
+
+Files are capped at **3 MB each**, with combined form uploads below **3.8 MB per save** to fit Vercel's function payload limit. Upload the download and cover in separate saves if necessary. Larger direct-to-Storage uploads can be added later. File contents are checked for the allowed formats. Uploaded objects use unique paths and are never overwritten or automatically deleted: old purchase snapshots may reference them.
+
+Amounts displayed in the catalog mirror the immutable Stripe Price saved by the editor. Checkout retrieves and checks that Price before reserving a purchase, uses its server-stored ID, and ignores browser-provided amounts. Product revisions reject stale edits from another tab. Stripe and Postgres are separate services; if a save fails between them, retry the draft and check the product before publishing. Unreferenced Stripe prices or Storage files may remain after failed saves and should not be deleted without checking purchase references.
+
+Checkout stores the delivery snapshot **before** requesting a Stripe session. Paid webhooks validate that reservation, currency, subtotal, session binding, store/product metadata, and environment. Signed events for other checkouts are acknowledged without fulfillment. A product can later be edited or unpublished without changing what an existing paid buyer receives. Delivery remains triggered by paid webhooks, never by the thank-you page.
+
+This release uses one product per checkout and one-time payments. Adaptive Pricing is explicitly disabled so the reserved amount/currency stays consistent. Automatic tax collection is not enabled by this implementation; configure the appropriate tax behavior and registrations before relying on tax calculation. Refunds and disputes are handled in Stripe, and their statuses are not yet synchronized to this dashboard.
+
+## 6. Test the full purchase flow
+
+For local webhook forwarding:
+
+```sh
+npm run dev
+# In a second terminal, keep this running throughout local payment testing:
+npm run stripe:listen
+```
+
+The Stripe CLI must be installed (`npm install -g @stripe/cli`). The helper uses the test key already in `.env.local`, forwards only the two Checkout payment events from your own account, and writes the matching signing secret into `.env.local` without printing it. Set `APP_URL=http://localhost:3000`; restart Next.js if it does not pick up the updated secret. Keep the listener running for every local purchase. Opening the thank-you page does not record or fulfill an order. The local listener secret differs from a deployed endpoint secret; the helper refuses live keys and non-local origins.
+
+For a deployed store, configure its public Stripe webhook endpoint as described above. The local listener is not a replacement for deployed webhook configuration. Do not mix test and live product IDs or webhook secrets.
+
+To recover sandbox purchases made while the webhook was disconnected:
+
+```sh
+npm run orders:recover
+npm run orders:recover -- --record
+```
+
+The first command is a dry run. The second verifies each session directly with Stripe against its saved reservation, then records missing paid orders as **pending** without sending emails or changing an existing order. It examines the latest 500 checkout reservations. Restore any missing purchased files before using the authenticated order resend control. Existing purchases retain their original snapshot paths; uploading a replacement for the current product does not repair an older missing snapshot automatically.
+
+Publishing, checkout creation, and delivery now verify that the referenced download actually exists in the private bucket. A seeded filename/path does not mean the file has been uploaded. Missing files block new checkout and keep already-paid orders pending; delivery is retried only after the original asset has been restored.
+
+Publish a product from the dashboard, open its page, click **Get the kit**, and use Stripe's test card `4242 4242 4242 4242`, any future expiry, and any three-digit CVC. Verify:
+
+1. Checkout shows the amount/currency you set and returns to `/thank-you`.
+2. The paid webhook returns 200, one order appears, and one email reaches your Gmail inbox with the expected sender, usually within a minute. Actual inbox placement requires a real test; mocks cannot prove it.
+3. The file downloads with the saved filename. The sixth attempt redirects to `/download-error`. Resource links open correctly.
+4. A replay sends no second email. For a registered test endpoint, run `stripe events resend evt_... --webhook-endpoint we_...`.
+5. An invalid Resend API key causes a 500 and a pending order. Restore the key, restart/redeploy, and replay or wait for a Stripe retry. The retry should deliver successfully.
+6. Edit or unpublish a product after starting checkout; the resulting purchase must still deliver the saved asset version.
+7. From **Orders**, resend to the purchase address or a corrected one. Confirm the old link stops working and the new link has a fresh 14-day/five-download allowance.
+8. An expired/signed-out session cannot edit products, change settings, resend orders, or export buyer data.
+
+`stripe trigger` cannot fully test the app's reserved checkout mapping. Make the test purchase through the storefront.
+
+## Owner operations
+
+The overview and order list cover the **latest 100 orders**. Gross sales are grouped by currency and are before fees/refunds. The pending count refers to that same window. CSV export contains the latest **5,000** orders; it excludes token hashes and private resource paths and escapes formula-like spreadsheet values. Buyer addresses are purchase contacts, not marketing opt-ins.
+
+The owner dashboard uses session authentication for support resends. For existing automation only, the optional legacy endpoint still accepts:
+
+```sh
+curl -X POST "$APP_URL/api/admin/resend" \
+  -H "Content-Type: application/json" \
+  -H "x-admin-secret: $ADMIN_SECRET" \
+  --data '{"stripe_session_id":"cs_test_...","email":"corrected@example.com"}'
+```
+
+Wrong/missing secrets return 401; the endpoint is unavailable if `ADMIN_SECRET` is not configured. On Windows use a Bash-compatible shell for that example, or `curl.exe` with PowerShell environment-variable syntax. Normal owner operation does not require this endpoint or a shared admin secret.
+
+## Reliability and security details
+
+Saving a product syncs its name, description, and uploaded cover to Stripe along with its default price. Before opening a new checkout, the app refreshes those details for existing products too. Checkout uses the full product description, falling back to the short description when empty. Covers use a 48-hour signed Supabase URL refreshed for each new session, covering Stripe's maximum 24-hour checkout lifetime and working during localhost development. Only cover artwork is shared with Stripe; the bucket stays private and paid download links keep their existing delivery controls. Existing open sessions are reused; start a fresh checkout to see newly changed product details.
+
+Tokens are 32 random bytes encoded as base64url; only their SHA-256 hashes are stored. Downloads consume a count with one atomic SQL update before creating a signed URL. Responses use no-store/no-referrer headers. A Storage signing outage returns 503 and still consumes the attempt, as in the original brief.
+
+Webhook and support sends claim a five-minute database lease before rotating tokens. Routes are capped at 60 seconds; keep hosting execution limits below the lease. Resend calls have a 15-second timeout and a token-specific idempotency key. Pending failures return 500 for Stripe retry; a crashed request's lease eventually expires.
+
+There is no transaction spanning Stripe, Resend, and Postgres. If Resend accepts mail but its response or the sent-state write is lost, a retry can issue a second email with a fresh token. The lease prevents simultaneous senders, not every uncertain cross-service outcome. Use the latest email or owner resend in that case. A durable delivery-job/reconciliation system is later scaling work.
+
+Application logs omit raw tokens, signed URLs, complete request bodies, passwords, and provider payloads. Avoid adding query/body logging in hosting or observability tools. Keep the service role and Stripe/Resend keys server-only. The initial table and RPC grants remain restricted to the service role.
+
+## Verification
+
+```sh
+npm test
+npm run lint
+npm run build
+```
+
+The tests mock Stripe, Supabase, and Resend while exercising route, catalog, checkout, upload-validation, owner-auth, delivery, token, and export logic. They cover unauthorized/cross-origin requests, price tampering, drafts, store ownership, repeated and concurrent checkout requests, webhook replays, delivery snapshots, failed-send retries, download limits, and support actions. Database migration execution and live-service acceptance are separate checks.
+
+The starter dependency graph has existing npm audit findings in shadcn/ESLint's `braces`/`micromatch`/`fast-glob` tooling chain. No forced unrelated upgrades were applied. No new production dependencies were added for this storefront build.
+
+## Deploy and go live
+
+1. Apply the migration to the intended Supabase project, create the private bucket, and create/configure the owner Auth user.
+2. Deploy to Vercel with Node.js 22+ and complete environment variables. Set `APP_URL` to the public HTTPS origin. Ensure checkout/webhook routes are reachable without deployment authentication. Keep preview and production payment environments separate.
+3. Verify the complete flow in test mode, including inbox delivery, file contents, resends, and replays.
+4. When ready, switch to the live Stripe key and create the live webhook endpoint with both event subscriptions and the pinned API version. Set its live signing secret.
+5. Restart/redeploy, then **save each product in the dashboard using the live key** to create its live Product/Price before accepting sales. Verify the public price and complete a controlled live purchase. Old test Price IDs cannot be used with live keys.
+6. Confirm sender-domain status, support mailbox, product/resource access, customer-facing policies, and the tax configuration appropriate for the business.
+
+Next.js Cache Components and dependent Partial Prefetching remain disabled so API routes can explicitly select the Node.js runtime. UI patterns are recorded in `ui-registry.md`.
