@@ -5,10 +5,13 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { checkDeployment } from "../lib/deployment-rules.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 process.loadEnvFile(path.join(root, ".env.local"));
-if (!/^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY ?? "")) throw new Error("Recovery is limited to sandbox/test purchases.");
+// Same separation rules as the app: this script can never run against production data.
+const deployment = checkDeployment(process.env);
+if (deployment.production || !deployment.testPayments) throw new Error("Recovery is limited to sandbox/test purchases.");
 const record = process.argv.includes("--record");
 const STORE_ID = "c9fdc8a4-3d95-4d43-97f2-b650386179d2";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { timeout: 15000, maxNetworkRetries: 1 });

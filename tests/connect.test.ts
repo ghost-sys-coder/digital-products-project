@@ -10,6 +10,7 @@ import { POST as connectedWebhook } from "../app/api/stripe-connect-webhook/rout
 import { POST as platformWebhook } from "../app/api/stripe-webhook/route";
 import { POST as paymentAction } from "../app/api/admin/payments/stripe/[action]/route";
 import { GET as callback } from "../app/api/admin/payments/stripe/callback/route";
+import { stubDevelopment } from "./env";
 
 const jar = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: (key: string) => jar.has(key) ? { value: jar.get(key) } : undefined, set: (key: string, value: string) => jar.set(key, value) }) }));
@@ -130,7 +131,7 @@ describe("connected-account checkout and delivery", () => {
   });
   it("does not let localhost delivery claim a checkout reserved on the public origin", async () => {
     connection(); const product = seedProduct(); await startCheckout(product.id, randomUUID());
-    vi.stubEnv("APP_URL", "http://localhost:3000");
+    stubDevelopment();
     expect((await connectedWebhook(event())).status).toBe(200);
     expect(sendEmail).not.toHaveBeenCalled();
   });

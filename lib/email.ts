@@ -1,6 +1,7 @@
 import "server-only";
 import { Resend } from "resend";
-import { getEnv } from "./env";
+import { getDeployment, getEnv } from "./env";
+import { emailAllowed } from "./deployment-rules";
 import type { Product } from "./products";
 import { MAX_DOWNLOADS, TOKEN_LIFETIME_DAYS } from "./tokens";
 
@@ -48,12 +49,21 @@ VeilCode Studio`,
 export async function sendDeliveryEmail(input: {
   email: string; sessionId: string; product: Product; token: string; tokenHash: string;
 }) {
-  const resend = new Resend(getEnv().RESEND_API_KEY);
+  const env = getEnv();
+  const deployment = getDeployment();
+  if (!deployment.production && !emailAllowed(input.email, deployment.emailAllowlist)) {
+    // Fail closed: the order stays pending. Never log the address itself.
+    console.warn("Non-production email blocked: recipient is not on EMAIL_ALLOWLIST", { sessionId: input.sessionId });
+    throw new Error("Recipient is not allowed outside production");
+  }
+  const message = buildDeliveryEmail(input.product, input.token);
+  const resend = new Resend(env.RESEND_API_KEY);
   const { data, error } = await resend.emails.send({
     from: "VeilCode Studio <orders@mail.veilcode.studio>",
     replyTo: "support@veilcode.studio",
     to: input.email,
-    ...buildDeliveryEmail(input.product, input.token),
+    ...message,
+    subject: deployment.production ? message.subject : `[${deployment.env === "preview" ? "Preview" : "Dev"}] ${message.subject}`,
   }, {
     idempotencyKey: `delivery-${input.sessionId}-${input.tokenHash.slice(0, 16)}`,
     signal: AbortSignal.timeout(15_000),

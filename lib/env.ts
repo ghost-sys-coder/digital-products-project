@@ -1,13 +1,29 @@
 import "server-only";
+import { checkDeployment, DeploymentRuleError, DEPLOYMENT_ENVS, type DeploymentEnv } from "./deployment-rules";
 
 const names = [
-  "APP_URL", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
-  "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY",
+  "DEPLOYMENT_ENV", "APP_URL", "PRODUCTION_APP_URL",
+  "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET",
+  "SUPABASE_URL", "PRODUCTION_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_PUBLISHABLE_KEY",
   "SUPABASE_BUCKET", "RESEND_API_KEY",
 ] as const;
 
 export class ConfigurationError extends Error {
   constructor(name: string, reason = "is missing") { super(`Environment variable ${name} ${reason}`); }
+}
+
+/** Validated environment separation rules for this deployment. Throws ConfigurationError. */
+export function getDeployment() {
+  try { return checkDeployment(process.env); } catch (error) {
+    if (error instanceof DeploymentRuleError) throw new ConfigurationError(error.variable, error.reason);
+    throw error;
+  }
+}
+
+/** Non-throwing label for UI (banners, robots). Null when unset or invalid. */
+export function deploymentLabel(): DeploymentEnv | null {
+  const value = process.env.DEPLOYMENT_ENV?.trim();
+  return (DEPLOYMENT_ENVS as readonly string[]).includes(value ?? "") ? value as DeploymentEnv : null;
 }
 
 export function getEnv() {
@@ -33,5 +49,7 @@ export function getEnv() {
       throw new ConfigurationError("APP_URL", "must be an origin without a path, query, or fragment");
     }
   }
+  // Every server path reads getEnv(), so a mixed-up environment fails closed everywhere.
+  getDeployment();
   return env;
 }

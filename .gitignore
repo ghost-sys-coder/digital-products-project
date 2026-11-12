@@ -44,3 +44,8 @@ next-env.d.ts
 
 .vercel
 package-lock.json
+.env*.local
+
+# Supabase CLI link state (local only)
+supabase/.temp/*
+!supabase/.temp/cli-latest

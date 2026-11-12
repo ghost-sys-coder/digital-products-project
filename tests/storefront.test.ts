@@ -23,6 +23,7 @@ import { GET as exportRoute } from "../app/api/admin/orders/export/route";
 import { GET as coverRoute } from "../app/api/products/[id]/cover/route";
 import { POST as webhookRoute } from "../app/api/stripe-webhook/route";
 import { GET as downloadRoute } from "../app/api/download/route";
+import { stubDevelopment } from "./env";
 
 function request(path: string, body: unknown, origin = "https://delivery.example.com") {
   return new Request(`https://delivery.example.com${path}`, { method: "POST", headers: { "Content-Type": "application/json", origin }, body: JSON.stringify(body) });
@@ -190,7 +191,7 @@ describe("per-purchase Stripe checkout and delivery", () => {
     expect(productsUpdate).toHaveBeenCalledTimes(1);
   });
   it("backfills existing Stripe product details before checkout using only the cover", async () => {
-    vi.stubEnv("APP_URL", "http://localhost:3000");
+    stubDevelopment();
     const product = seedProduct({ cover_path: `${STORE_ID}/covers/current.png`, description: "An eight-stage guide with editable templates." });
     await startCheckout(product.id, randomUUID());
     expect(signUrl).toHaveBeenCalledExactlyOnceWith(product.cover_path, CHECKOUT_COVER_TTL);

@@ -1,4 +1,5 @@
 import { beforeEach, vi } from "vitest";
+import { fakeSupabaseKey } from "./env";
 
 vi.mock("stripe", async () => {
   const fakes = await import("./fakes");
@@ -21,12 +22,21 @@ vi.mock("resend", async () => {
 });
 
 beforeEach(() => {
+  // Default: a production deployment on Vercel that is still in Stripe test mode.
+  vi.stubEnv("VERCEL", "1");
+  vi.stubEnv("VERCEL_ENV", "production");
+  vi.stubEnv("DEPLOYMENT_ENV", "production");
+  vi.stubEnv("ALLOW_TEST_PAYMENTS_IN_PRODUCTION", "true");
+  vi.stubEnv("EMAIL_ALLOWLIST", "");
   vi.stubEnv("APP_URL", "https://delivery.example.com");
+  vi.stubEnv("PRODUCTION_APP_URL", "https://delivery.example.com");
   vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_example");
   vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_example");
   vi.stubEnv("STRIPE_PAYMENT_LINK_ID_L2K", "plink_l2k");
   vi.stubEnv("SUPABASE_URL", "https://example.supabase.co");
-  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service_role_example");
+  vi.stubEnv("PRODUCTION_SUPABASE_URL", "https://example.supabase.co");
+  vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", fakeSupabaseKey("service_role"));
+  vi.stubEnv("SUPABASE_PUBLISHABLE_KEY", "sb_publishable_example");
   vi.stubEnv("SUPABASE_BUCKET", "products");
   vi.stubEnv("RESEND_API_KEY", "re_example");
   vi.stubEnv("L2K_TEMPLATES_URL", "https://drive.google.com/drive/folders/templates");
