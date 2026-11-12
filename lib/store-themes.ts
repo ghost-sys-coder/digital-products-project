@@ -22,7 +22,7 @@ export const THEME_TOKENS: Record<ThemeId, ThemeTokens> = {
   "bold-dark": {
     label: "Bold Dark", description: "Deep blacks, glowing accents, high contrast. Suits projectors, fitness, and gaming.", dark: true,
     bg: "#07080c", surface: "#11131a", surfaceAlt: "#1a1d27", text: "#f4f5fa", muted: "#a2a6b8", border: "#262a37",
-    accent: "#7c5cff", radius: "14px", buttonRadius: "12px", headingFont: "space", bodyFont: "manrope",
+    accent: "#6c47ff", radius: "14px", buttonRadius: "12px", headingFont: "space", bodyFont: "manrope",
     headingWeight: 700, headingTracking: "-0.03em", headingCase: "none",
   },
   "soft-luxe": {

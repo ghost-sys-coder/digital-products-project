@@ -13,12 +13,17 @@ export const ICONS = [
 export type IconName = (typeof ICONS)[number];
 
 export type Media = { path: string; kind: "image" | "video"; alt: string };
+/** Background treatment: the page colour, the theme's soft surface, or a wash of the brand accent. */
+export type Tone = "plain" | "soft" | "accent";
 
 type SectionData = {
   announcement: { text: string };
   hero: { headline: string; subheadline: string; media: Media[]; highlights: string[]; badges: string[] };
-  benefits: { title: string; items: { icon: IconName; title: string; text: string }[] };
-  features: { items: { title: string; text: string; media: Media | null }[] };
+  showcase: { eyebrow: string; headline: string; text: string; media: Media | null; layout: "split" | "centered"; tone: Tone; watermark: string; buttonLabel: string };
+  benefits: { title: string; layout: "grid" | "spotlight"; media: Media | null; items: { icon: IconName; title: string; text: string }[] };
+  features: { items: { eyebrow: string; title: string; text: string; media: Media | null }[] };
+  image_banner: { media: Media | null; headline: string; text: string; buttonLabel: string };
+  statement: { quote: string; attribution: string; tone: Tone };
   video_strip: { title: string; videos: { media: Media; caption: string }[] };
   how_it_works: { title: string; steps: { title: string; text: string }[] };
   comparison: { title: string; ourLabel: string; theirLabel: string; rows: { feature: string; ours: boolean; theirs: boolean }[] };
@@ -34,7 +39,8 @@ export type Section = { [T in SectionType]: { id: string; type: T; enabled: bool
 export type StorePage = { version: typeof STORE_PAGE_VERSION; sections: Section[] };
 
 export const SECTION_LABELS: Record<SectionType, string> = {
-  announcement: "Announcement bar", hero: "Hero and buy box", benefits: "Benefits", features: "Feature blocks",
+  announcement: "Announcement bar", hero: "Hero and buy box", showcase: "Showcase banner", benefits: "Benefits",
+  features: "Feature blocks", image_banner: "Image banner", statement: "Statement or quote",
   video_strip: "Video strip", how_it_works: "How it works", comparison: "Comparison", size_guide: "Size guide",
   specs: "Specs or ingredients", reviews: "Verified reviews", guarantee: "Guarantee and shipping", faq: "FAQ",
   final_cta: "Final call to action",
@@ -68,6 +74,10 @@ function list<T>(value: unknown, path: string, max: number, item: (entry: unknow
   return value.map((entry, index) => item(entry, `${path}[${index}]`));
 }
 function bool(value: unknown) { return value === true; }
+function choice<T extends string>(value: unknown, options: readonly T[], fallback: T): T {
+  return options.includes(value as T) ? value as T : fallback;
+}
+const TONES = ["plain", "soft", "accent"] as const;
 
 /** Storefront media must sit in this product's folder of the public storefront bucket. */
 export function mediaPrefix(storeId: string, productId: string) { return `${storeId}/${productId}/`; }
@@ -89,8 +99,23 @@ function parseData(type: SectionType, raw: Record<string, unknown>, path: string
       highlights: list(raw.highlights, `${path}.highlights`, 6, (entry, p) => text(entry, p, 90, true)),
       badges: list(raw.badges, `${path}.badges`, 4, (entry, p) => text(entry, p, 40, true)),
     };
+    case "showcase": return {
+      eyebrow: text(raw.eyebrow, `${path}.eyebrow`, 60), headline: text(raw.headline, `${path}.headline`, 120, true),
+      text: text(raw.text, `${path}.text`, 300), media: raw.media ? media(raw.media, `${path}.media`, prefix, ["image"]) : null,
+      layout: choice(raw.layout, ["split", "centered"] as const, "split"), tone: choice(raw.tone, TONES, "soft"),
+      watermark: text(raw.watermark, `${path}.watermark`, 24), buttonLabel: text(raw.buttonLabel, `${path}.buttonLabel`, 30),
+    };
+    case "image_banner": return {
+      media: raw.media ? media(raw.media, `${path}.media`, prefix) : null, headline: text(raw.headline, `${path}.headline`, 120),
+      text: text(raw.text, `${path}.text`, 300), buttonLabel: text(raw.buttonLabel, `${path}.buttonLabel`, 30),
+    };
+    case "statement": return {
+      quote: text(raw.quote, `${path}.quote`, 300, true), attribution: text(raw.attribution, `${path}.attribution`, 80),
+      tone: choice(raw.tone, TONES, "accent"),
+    };
     case "benefits": return {
-      title: text(raw.title, `${path}.title`, 100),
+      title: text(raw.title, `${path}.title`, 100), layout: choice(raw.layout, ["grid", "spotlight"] as const, "grid"),
+      media: raw.media ? media(raw.media, `${path}.media`, prefix, ["image"]) : null,
       items: list(raw.items, `${path}.items`, 8, (entry, p) => {
         const item = object(entry, p);
         const icon = (ICONS as readonly string[]).includes(item.icon as string) ? item.icon as IconName : "check";
@@ -100,7 +125,7 @@ function parseData(type: SectionType, raw: Record<string, unknown>, path: string
     case "features": return {
       items: list(raw.items, `${path}.items`, 8, (entry, p) => {
         const item = object(entry, p);
-        return { title: text(item.title, `${p}.title`, 90, true), text: text(item.text, `${p}.text`, 600), media: item.media ? media(item.media, `${p}.media`, prefix) : null };
+        return { eyebrow: text(item.eyebrow, `${p}.eyebrow`, 40), title: text(item.title, `${p}.title`, 90, true), text: text(item.text, `${p}.text`, 600), media: item.media ? media(item.media, `${p}.media`, prefix) : null };
       }),
     };
     case "video_strip": return {
@@ -193,7 +218,7 @@ export function starterStorePage(): StorePage {
     sections: [
       { id: "announcement", type: "announcement", enabled: true, data: { text: "Free shipping on every US order" } },
       { id: "hero", type: "hero", enabled: true, data: { headline: "", subheadline: "", media: [], highlights: [], badges: ["Free US shipping", "30-day returns", "Secure checkout"] } },
-      { id: "benefits", type: "benefits", enabled: true, data: { title: "Why you'll love it", items: [] } },
+      { id: "benefits", type: "benefits", enabled: true, data: { title: "Why you'll love it", layout: "grid", media: null, items: [] } },
       { id: "features", type: "features", enabled: true, data: { items: [] } },
       { id: "how-it-works", type: "how_it_works", enabled: false, data: { title: "How it works", steps: [] } },
       { id: "comparison", type: "comparison", enabled: false, data: { title: "Why it's different", ourLabel: "Ours", theirLabel: "Others", rows: [] } },

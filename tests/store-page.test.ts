@@ -72,3 +72,27 @@ describe("themes and brand", () => {
     expect(() => parseBrand({ supportEmail: "nope" }, STORE, PRODUCT)).toThrow(BrandError);
   });
 });
+
+describe("showcase, banner, and statement sections", () => {
+  it("fills safe defaults and refuses videos where only images fit", () => {
+    const parsed = parseStorePage(page([{ id: "s", type: "showcase", data: { headline: "Glow up", layout: "sideways", tone: "neon" } }]), STORE, PRODUCT);
+    expect(parsed.sections[0].data).toMatchObject({ layout: "split", tone: "soft", media: null, watermark: "", buttonLabel: "" });
+    expect(() => parseStorePage(page([{ id: "s", type: "showcase", data: { headline: "x", media: { path: `${prefix}media/a.mp4`, kind: "video" } } }]), STORE, PRODUCT)).toThrow(/must be image/);
+    expect(() => parseStorePage(page([{ id: "s", type: "showcase", data: {} }]), STORE, PRODUCT)).toThrow(/headline: is required/);
+  });
+
+  it("validates benefit layouts, feature eyebrows, banners, and statements", () => {
+    const parsed = parseStorePage(page([
+      { id: "b", type: "benefits", data: { layout: "spotlight", media: { path: `${prefix}media/c.webp`, kind: "image" }, items: [{ icon: "moon", title: "Calm" }] } },
+      { id: "f", type: "features", data: { items: [{ eyebrow: "The effect", title: "Moves" }] } },
+      { id: "i", type: "image_banner", data: { media: { path: `${prefix}media/b.mp4`, kind: "video" }, headline: "Cosmic" } },
+      { id: "q", type: "statement", data: { quote: "Stars, at home." } },
+    ]), STORE, PRODUCT);
+    expect(parsed.sections.map((section) => section.data)).toMatchObject([
+      { layout: "spotlight", media: { kind: "image" } }, { items: [{ eyebrow: "The effect" }] },
+      { media: { kind: "video" }, buttonLabel: "" }, { quote: "Stars, at home.", tone: "accent", attribution: "" },
+    ]);
+    expect(() => parseStorePage(page([{ id: "q", type: "statement", data: { quote: "" } }]), STORE, PRODUCT)).toThrow(/quote: is required/);
+    expect(() => parseStorePage(page([{ id: "f", type: "features", data: { items: [{ eyebrow: "x".repeat(41), title: "t" }] } }]), STORE, PRODUCT)).toThrow(/40 characters/);
+  });
+});

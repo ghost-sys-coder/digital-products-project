@@ -52,14 +52,17 @@ The **section library** is arranged by the owner in admin, per product. Each sec
 | Announcement bar | Free shipping, offer, or delivery message |
 | Hero / buy box | Gallery (images and short videos), title, rating summary, price and compare-at price, variant picker (colour, size), quantity, Buy button, trust badges, delivery estimate |
 | Sticky buy bar | Stays visible while scrolling, as on mobile Shopify themes |
-| Benefits | Icon and short-text grid |
-| Feature blocks | Alternating image or video with text |
+| Showcase banner | Large headline beside (split) or over (centered) a product cut-out on a tinted shape, with an optional watermark word |
+| Benefits | Icon and short-text grid, or "spotlight": the product in a circle with benefits on both sides |
+| Feature blocks | Alternating image or video with text and a small label above each heading |
+| Image banner | Full-width photo or video with overlaid headline and button |
+| Statement | Large quote or mission line on a soft or accent-tinted band |
 | Video / UGC strip | Short vertical clips, TikTok-style |
 | How it works | Numbered steps |
 | Comparison | "Us vs. others" table |
 | Size guide | Clothing; modal from the variant picker |
 | Specs / ingredients | Tech specs or beauty ingredients |
-| Verified reviews | Real buyer reviews with photos |
+| Verified reviews | Real buyer reviews with photos (Phase 2; renders nothing until then) |
 | Guarantee and shipping | Returns window, delivery times |
 | FAQ | Accordion |
 | Final call to action | Repeat buy box |
