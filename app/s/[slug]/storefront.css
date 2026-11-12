@@ -503,3 +503,7 @@ html:has(.st) { scroll-behavior: smooth; scroll-padding-top: 84px; }
   .st-tile.tone-accent p { color: color-mix(in srgb, var(--st-on-accent) 80%, transparent); }
   .st-compare-table thead .ours { color: color-mix(in srgb, var(--st-accent) 75%, var(--st-text)); }
 }
+
+/* Preview and development only: let the environment banner scroll away on store pages so it never
+   covers the store's own sticky header. This stylesheet only loads on /s/ routes. */
+body > .environment-banner { position: relative; }
