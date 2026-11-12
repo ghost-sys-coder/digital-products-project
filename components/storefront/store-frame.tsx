@@ -1,9 +1,11 @@
 import Image from "next/image";
+import Script from "next/script";
 import { Lock } from "lucide-react";
 import type { Storefront } from "@/lib/storefront";
 import { POLICY_KINDS, POLICY_TITLES } from "@/lib/store-policies";
 import { themeVariables, THEME_TOKENS } from "@/lib/store-themes";
 import { storeFontVariables } from "@/app/s/[slug]/fonts";
+import { pixelLoader } from "@/lib/tiktok-pixel";
 
 type NavItem = { href: string; label: string };
 
@@ -46,9 +48,12 @@ export function StoreFrame({ store, children, nav = [], announcement, onStorePag
         {store.policies && (
           <nav className="st-shell st-footer-policies" aria-label="Store policies">
             {POLICY_KINDS.map((kind) => <a key={kind} href={`${policyBase}/${kind}${query}`}>{POLICY_TITLES[kind]}</a>)}
+            {store.brand.tiktokPixelId && <a href={`${policyBase}/privacy${query}#choices`}>Your privacy choices</a>}
           </nav>
         )}
       </footer>
+      {/* Ads measurement, when the store has a pixel and the shopper hasn't opted out (checked in the loader). */}
+      {store.brand.tiktokPixelId && <Script id="tiktok-pixel" strategy="afterInteractive">{pixelLoader(store.brand.tiktokPixelId)}</Script>}
     </div>
   );
 }

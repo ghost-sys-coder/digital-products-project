@@ -22,7 +22,7 @@ export type PoliciesDraft = {
 };
 export type Draft = {
   name: string; slug: string; tagline: string; status: "draft" | "published"; theme: ThemeId;
-  brand: { name: string; logoPath: string | null; accent: string | null; supportEmail: string };
+  brand: { name: string; logoPath: string | null; accent: string | null; supportEmail: string; tiktokPixelId: string };
   page: StorePage; options: OptionDraft[]; variants: VariantDraft[];
   shippingProfileId: string | null; profiles: ProfileDraft[]; policies: PoliciesDraft;
 };
@@ -56,7 +56,7 @@ export function toDraft(data: StoreEditorData): Draft {
   const extra = (raw.extra && typeof raw.extra === "object" ? raw.extra : {}) as Record<string, unknown>;
   return {
     name: product.name, slug: product.slug, tagline: product.tagline, status: product.status, theme: product.theme,
-    brand: { name: product.brand.name, logoPath: product.brand.logoPath, accent: product.brand.accent, supportEmail: product.brand.supportEmail ?? "" },
+    brand: { name: product.brand.name, logoPath: product.brand.logoPath, accent: product.brand.accent, supportEmail: product.brand.supportEmail ?? "", tiktokPixelId: product.brand.tiktokPixelId ?? "" },
     page: product.page,
     options: optionsFromVariants(data.variants),
     variants: data.variants.map((variant) => ({
@@ -149,7 +149,7 @@ export function saveProblems(draft: Draft, storeId: string, productId: string, c
     const described = describePageError(error.message, draft.page, SECTION_LABELS);
     problems.push({ tab: "page", text: described.text, section: described.section });
   }
-  try { parseBrand({ ...draft.brand, supportEmail: draft.brand.supportEmail || null }, storeId, productId); } catch (error) {
+  try { parseBrand({ ...draft.brand, supportEmail: draft.brand.supportEmail || null, tiktokPixelId: draft.brand.tiktokPixelId || null }, storeId, productId); } catch (error) {
     if (error instanceof BrandError) problems.push({ tab: "brand", text: error.message }); else throw error;
   }
   for (const profile of changedProfiles) {
@@ -185,7 +185,7 @@ export function saveRequest(draft: Draft, productId: string, revision: number, c
   return {
     action: "save", id: productId, revision, status,
     name: draft.name, slug: draft.slug, tagline: draft.tagline, theme: draft.theme,
-    brand: { ...draft.brand, supportEmail: draft.brand.supportEmail.trim() || null },
+    brand: { ...draft.brand, supportEmail: draft.brand.supportEmail.trim() || null, tiktokPixelId: draft.brand.tiktokPixelId.trim() || null },
     page: draft.page, variants: variantInputs(draft) as unknown as VariantInput[],
     profiles: changedProfiles.map(profileInput) as unknown as ProfileInput[], shippingProfileId: draft.shippingProfileId,
     policies: policiesInput(draft.policies),

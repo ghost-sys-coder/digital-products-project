@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Ban, Check, Copy, PackageCheck, Send, ShoppingCart, Truck } from "lucide-react";
+import { Ban, Check, Clock, Copy, PackageCheck, Send, ShoppingCart, Truck } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { FulfillmentStatus } from "@/lib/database.types";
 
@@ -16,32 +16,60 @@ export function CopyField({ label, value }: { label: string; value: string }) {
 type Props = {
   orderId: string; orderRef: string; customer: string; status: FulfillmentStatus; supplierRef: string | null;
   tracking: { number: string | null; carrier: string | null; url: string | null; emailed: boolean };
+  /** The ship-by date the customer was last given, the original promise, and notices sent so far. */
+  delay: { shipBy: string; originalShipBy: string; notices: number };
+  /** The amount a refund would return, formatted. */
+  total: string | null;
 };
 
+const addDays = (day: string, days: number) => new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+const daysBetween = (from: string, to: string) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+
+/** Emails the customer a new ship-by date with a link to cancel for a full refund. */
+function DelayNoticeForm({ delay, pending, onSend }: { delay: Props["delay"]; pending: boolean; onSend: (fields: { shipBy: string; reason: string }) => void }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const earliest = addDays(delay.shipBy > today ? delay.shipBy : today, 1);
+  const [shipBy, setShipBy] = useState(addDays(earliest, 6));
+  const needsConsent = delay.notices > 0 || daysBetween(delay.originalShipBy, shipBy) > 30;
+  return <form className="fulfil-form" onSubmit={(event) => {
+    event.preventDefault();
+    onSend({ shipBy, reason: String(new FormData(event.currentTarget).get("reason") ?? "") });
+  }}>
+    <label>New ship-by date<input type="date" name="shipBy" required min={earliest} max={addDays(today, 120)} value={shipBy} onChange={(event) => setShipBy(event.target.value)} /></label>
+    <label>Reason <span className="optional">Optional, shown to the customer</span><textarea name="reason" maxLength={300} rows={2} placeholder="Our supplier is restocking this colour." /></label>
+    <span className="field-help">{needsConsent
+      ? (delay.notices > 0 ? "This is a second delay" : "This is more than 30 days after the original promise") + ", so the customer must agree to wait. The email asks them to reply; if they don't by the new date, cancel and refund the order."
+      : "The email offers a full refund. If the customer is happy to wait, they don't need to reply."}</span>
+    <button className="button secondary small" disabled={pending}><Send size={14} />{pending ? "Sending…" : "Email delay notice"}</button>
+  </form>;
+}
+
 /** Confirms a cancellation; stays open while it saves so the owner sees it finish. */
-function CancelOrderDialog({ open, onOpenChange, orderRef, customer, pending, onConfirm, returnFocus }: {
-  open: boolean; onOpenChange: (open: boolean) => void; orderRef: string; customer: string;
-  pending: boolean; onConfirm: () => void; returnFocus: React.RefObject<HTMLButtonElement | null>;
+function CancelOrderDialog({ open, onOpenChange, orderRef, customer, total, pending, onConfirm, returnFocus }: {
+  open: boolean; onOpenChange: (open: boolean) => void; orderRef: string; customer: string; total: string | null;
+  pending: boolean; onConfirm: (refund: boolean) => void; returnFocus: React.RefObject<HTMLButtonElement | null>;
 }) {
   const keepRef = useRef<HTMLButtonElement>(null);
+  const [refund, setRefund] = useState(true);
   return <AlertDialog open={open} onOpenChange={(next) => { if (!pending) onOpenChange(next); }}>
     <AlertDialogContent className="confirm-dialog" initialFocus={keepRef} finalFocus={returnFocus}>
       <div className="confirm-dialog-icon danger" aria-hidden="true"><Ban size={22} /></div>
       <AlertDialogHeader>
         <AlertDialogTitle>Cancel order {orderRef}?</AlertDialogTitle>
         <AlertDialogDescription>
-          {customer ? `${customer}'s order` : "This order"} moves to Cancelled and can&apos;t be shipped from here. Cancelling doesn&apos;t refund the customer: refund the payment in your Stripe dashboard, then let them know.
+          {customer ? `${customer}'s order` : "This order"} moves to Cancelled and can&apos;t be shipped from here. If you&apos;ve ordered it from your supplier, cancel that order too.
         </AlertDialogDescription>
       </AlertDialogHeader>
+      <label className="fulfil-check confirm-dialog-option"><input type="checkbox" checked={refund} disabled={pending} onChange={(event) => setRefund(event.target.checked)} /> Refund {total ?? "the full payment"} now and email the customer</label>
       <AlertDialogFooter>
         <AlertDialogCancel ref={keepRef} className="button secondary" disabled={pending}>Keep order</AlertDialogCancel>
-        <AlertDialogAction type="button" className="button danger" disabled={pending} onClick={onConfirm} aria-label={pending ? "Cancelling order" : "Cancel order"}><Ban size={15} />{pending ? "Cancelling…" : "Cancel order"}</AlertDialogAction>
+        <AlertDialogAction type="button" className="button danger" disabled={pending} onClick={() => onConfirm(refund)} aria-label={pending ? "Cancelling order" : refund ? "Cancel and refund" : "Cancel order"}><Ban size={15} />{pending ? "Cancelling…" : refund ? "Cancel and refund" : "Cancel order"}</AlertDialogAction>
       </AlertDialogFooter>
     </AlertDialogContent>
   </AlertDialog>;
 }
 
-export function FulfillmentActions({ orderId, orderRef, customer, status, supplierRef, tracking }: Props) {
+export function FulfillmentActions({ orderId, orderRef, customer, status, supplierRef, tracking, delay, total }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; failed: boolean } | null>(null);
@@ -88,10 +116,14 @@ export function FulfillmentActions({ orderId, orderRef, customer, status, suppli
 
   const cancel = <>
     <button type="button" ref={cancelButton} className="button secondary small fulfil-cancel" disabled={!!pending} onClick={() => setConfirmCancel(true)}><Ban size={14} />Cancel order</button>
-    <CancelOrderDialog open={confirmCancel} onOpenChange={setConfirmCancel} orderRef={orderRef} customer={customer}
+    <CancelOrderDialog open={confirmCancel} onOpenChange={setConfirmCancel} orderRef={orderRef} customer={customer} total={total}
       pending={pending === "cancelled"} returnFocus={cancelButton}
-      onConfirm={async () => { await send("cancelled", {}, "Order cancelled. Remember to refund it in Stripe."); setConfirmCancel(false); }} />
+      onConfirm={async (refund) => { await send("cancelled", { refund }, refund ? "Cancelled and refunded. The customer has been emailed." : "Order cancelled. Remember to refund it in Stripe."); setConfirmCancel(false); }} />
   </>;
+  const delayNotice = <details className="fulfil-details">
+    <summary><Clock size={13} aria-hidden /> {delay.notices ? "Send another delay notice" : "Running late? Email a delay notice"}</summary>
+    <DelayNoticeForm delay={delay} pending={pending === "delay_notice"} onSend={(fields) => send("delay_notice", fields, "Delay notice sent. The customer has a new date and a link to cancel.")} />
+  </details>;
 
   return <div className="fulfil-actions">
     {status === "needs_ordering" && <>
@@ -107,11 +139,13 @@ export function FulfillmentActions({ orderId, orderRef, customer, status, suppli
         {cancel}
       </div>
       {showTracking && trackingForm}
+      {delayNotice}
     </>}
     {status === "ordered" && <>
       {supplierRef && <p className="muted">Supplier order: {supplierRef}</p>}
       {trackingForm}
       <div className="fulfil-row">{cancel}</div>
+      {delayNotice}
     </>}
     {status === "shipped" && <>
       <div className="fulfil-row">
@@ -123,7 +157,7 @@ export function FulfillmentActions({ orderId, orderRef, customer, status, suppli
     {status === "delivered" && tracking.number && <div className="fulfil-row">
       <button type="button" className="button secondary small" disabled={!!pending} onClick={() => send("resend_tracking", {}, "Tracking email sent again.")}><Send size={14} />{pending === "resend_tracking" ? "Sending…" : "Resend tracking email"}</button>
     </div>}
-    {status === "cancelled" && <p className="muted">Cancelled. If you haven&apos;t already, refund the payment in your Stripe dashboard.</p>}
+
     {message && <p role="status" className={message.failed ? "form-error" : "save-success"}>{!message.failed && <Check size={15} />}{message.text}</p>}
   </div>;
 }

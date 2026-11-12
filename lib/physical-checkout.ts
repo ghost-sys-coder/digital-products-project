@@ -9,9 +9,9 @@ import { bindCheckoutSession, findCheckout } from "./checkout";
 import { paymentContext, stripeOptions } from "./payment-connections";
 import { parseBrand, statementSuffix } from "./store-themes";
 import { parseStorePage, storePageReadiness } from "./store-page";
-import { storeReadinessProblems } from "./store-policies";
+import { parseStorePolicies, storeReadinessProblems } from "./store-policies";
 import { publicOptions, storefrontMediaBase, variantLabel } from "./storefront";
-import type { Checkout, PhysicalSnapshot, ProductVariant, ShippingRate } from "./catalog.types";
+import type { AdAttribution, Checkout, PhysicalSnapshot, ProductVariant, ShippingRate } from "./catalog.types";
 
 // Checkout for physical single-product stores. Every amount comes from the database: the browser
 // only says which product, variant, and quantity. The reservation freezes what was charged and
@@ -21,7 +21,11 @@ export const MAX_QUANTITY = 10;
 /** Stripe Checkout accepts at most five shipping options. */
 const MAX_SHIPPING_OPTIONS = 5;
 
-export type PhysicalCheckoutRequest = { productId: string; variantId: string; quantity: number; checkoutId: string };
+export type PhysicalCheckoutRequest = {
+  productId: string; variantId: string; quantity: number; checkoutId: string;
+  /** Ad attribution from the request; null when the shopper opted out (lib/tiktok.ts). */
+  attribution?: AdAttribution | null;
+};
 
 export { statementSuffix };
 
@@ -96,6 +100,8 @@ export async function startPhysicalCheckout(input: PhysicalCheckoutRequest) {
         supplierUrl: variant.supplier_url, supplierSku: variant.supplier_sku,
       }],
       shippingOptions: rates.map((rate) => ({ rateId: rate.id, name: rate.name, amount: rate.amount, minDays: rate.min_days, maxDays: rate.max_days })),
+      // The ship-by promise for this order; the readiness check above has validated the policies.
+      processingDays: parseStorePolicies(product.policies).processingDays,
     };
     const reservation = {
       id: input.checkoutId, store_id: STORE_ID, product_id: product.id, product_slug: product.slug, kind: "physical" as const,
@@ -103,6 +109,8 @@ export async function startPhysicalCheckout(input: PhysicalCheckoutRequest) {
       amount: variant.price_amount * input.quantity, currency: product.currency,
       stripe_price_id: null, product_snapshot: null, stripe_session_id: null,
       payment_connection_id: context.connectionId, checkout_origin: new URL(getEnv().APP_URL).origin,
+      // Only kept when the store measures ads with a TikTok pixel, and only until the purchase is sent.
+      attribution: brand.tiktokPixelId ? input.attribution ?? null : null,
     };
     const { data, error } = await getSupabase().from("checkouts").insert(reservation).select("*").single();
     if (error && error.code !== "23505") throw new Error("Could not reserve checkout");
@@ -149,7 +157,8 @@ export async function startPhysicalCheckout(input: PhysicalCheckoutRequest) {
     ...(suffix ? { payment_intent_data: { statement_descriptor_suffix: suffix } } : {}),
     client_reference_id: checkout.id,
     metadata: { app: "veilcode-store", kind: "physical", checkout_id: checkout.id, product_id: checkout.product_id, store_id: STORE_ID },
-    success_url: new URL(`/s/${checkout.product_slug}/thank-you`, appUrl).toString(),
+    // The reference lets the thank-you page report this purchase to the store's ad pixel.
+    success_url: new URL(`/s/${checkout.product_slug}/thank-you?ref=${checkout.id}`, appUrl).toString(),
     cancel_url: new URL(`/s/${checkout.product_slug}?checkout=cancelled`, appUrl).toString(),
     integration_identifier: `veilcode-store-${tag}`,
   }, { ...options, idempotencyKey: `checkout-${checkout.id}` });

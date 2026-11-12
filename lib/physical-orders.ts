@@ -3,6 +3,9 @@ import type Stripe from "stripe";
 import { getStripe } from "./stripe";
 import { insertPhysicalOrder, markConfirmationSent } from "./orders";
 import { sendOrderConfirmation } from "./physical-email";
+import { getCatalogProduct } from "./catalog";
+import { parseBrand } from "./store-themes";
+import { sendTikTokPurchase } from "./tiktok";
 import type { Checkout, PhysicalSnapshot, ShippingAddress } from "./catalog.types";
 import type { PaymentConnection } from "./payment.types";
 
@@ -56,7 +59,7 @@ export async function recordPhysicalOrder(session: Stripe.Checkout.Session, chec
     // Stripe only allows US addresses here; keep the order so the owner can follow up rather than lose it.
     console.warn("Physical order has an incomplete or unexpected shipping address", { sessionId: session.id });
   }
-  const { order } = await insertPhysicalOrder({
+  const { order, inserted } = await insertPhysicalOrder({
     sessionId: session.id, productId: checkout.product_id, email,
     amountTotal: session.amount_total, currency: session.currency,
     customerName: address.name, shippingAddress: address, snapshot: { ...reserved, shipping },
@@ -65,6 +68,15 @@ export async function recordPhysicalOrder(session: Stripe.Checkout.Session, chec
   if (order.email_status !== "sent") {
     await sendOrderConfirmation(order);
     await markConfirmationSent(order.id);
+  }
+  if (inserted && checkout.attribution) {
+    // Ads measurement must never hold up an order: log and carry on.
+    try {
+      const product = await getCatalogProduct(checkout.product_id);
+      await sendTikTokPurchase(parseBrand(product?.brand, checkout.store_id, checkout.product_id).tiktokPixelId, checkout, order);
+    } catch (error) {
+      console.warn("TikTok purchase event not sent", { sessionId: session.id, reason: error instanceof Error ? error.message : "unknown" });
+    }
   }
   return order;
 }

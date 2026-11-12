@@ -5,6 +5,7 @@ import { getStorefront, type Storefront } from "@/lib/storefront";
 import { ProductHero } from "@/components/storefront/product-hero";
 import { StoreSection } from "@/components/storefront/sections";
 import { StoreFrame } from "@/components/storefront/store-frame";
+import { TikTokEvent } from "@/components/storefront/tiktok";
 import "./storefront.css";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +77,9 @@ export default async function StorePage(props: Params) {
 
   return (
     <StoreFrame store={store} nav={nav} announcement={announcement?.type === "announcement" ? announcement.data.text : undefined} onStorePage>
+      {store.brand.tiktokPixelId && <TikTokEvent event="ViewContent" params={{
+        content_type: "product", content_id: store.product.id, content_name: store.product.name, currency: store.product.currency.toUpperCase(), value: lowest / 100,
+      }} />}
       <main id="top">
         {query.checkout === "cancelled" && <p className="st-shell st-notice" role="status">Checkout was cancelled and you haven&apos;t been charged.</p>}
         {sections.map((section) => section.type === "hero"

@@ -49,6 +49,8 @@ export type PhysicalSnapshot = {
     supplierUrl: string | null; supplierSku: string | null;
   }[];
   shippingOptions: { rateId: string; name: string; amount: number; minDays: number; maxDays: number }[];
+  /** Business days to prepare the order before it ships, as the store's policies promised at checkout. */
+  processingDays?: { min: number; max: number };
   /** Set on the order from the option the buyer chose in Stripe Checkout. */
   shipping?: { name: string; amount: number; minDays: number; maxDays: number } | null;
 };
@@ -56,6 +58,9 @@ export type ShippingAddress = {
   name: string | null; line1: string | null; line2: string | null; city: string | null;
   state: string | null; postal_code: string | null; country: string | null; phone: string | null;
 };
+
+/** What a checkout request knew about the shopper for ad attribution (lib/tiktok.ts). */
+export type AdAttribution = { ttclid: string | null; ttp: string | null; ip: string | null; userAgent: string | null; url: string | null };
 
 export type Checkout = {
   id: string; store_id: string; product_id: string; stripe_session_id: string | null;
@@ -65,4 +70,5 @@ export type Checkout = {
   payment_connection_id?: string | null; checkout_origin?: string | null;
   kind?: ProductKind; variant_id?: string | null; quantity?: number;
   physical_snapshot?: PhysicalSnapshot | null;
+  attribution?: AdAttribution | null;
 };

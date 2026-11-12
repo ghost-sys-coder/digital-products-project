@@ -125,3 +125,11 @@
 .confirm-dialog-icon.danger { background: #fef3f2; color: #b42318; }
 .button.danger { border-color: #b42318; background: #b42318; color: white; }
 .button.danger:hover:not(:disabled) { background: #912018; border-color: #912018; }
+
+/* Delays and cancellations */
+.badge.danger { color: #a62434; background: #fef3f2; }
+.fulfil-cancelled { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.fulfil-cancelled svg { flex: none; margin-top: 3px; }
+.fulfil-details summary { display: inline-flex; align-items: center; gap: 6px; }
+.fulfil-form textarea { width: 100%; min-height: 0; margin-top: 4px; }
+.confirm-dialog-option { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-size: 12px; }

@@ -36,7 +36,15 @@ export type Order = {
   shipped_at?: string | null;
   delivered_at?: string | null;
   tracking_email_sent_at?: string | null;
+  // Delays and cancellations (supabase/migrations/20261113120000_order_delays.sql).
+  delay_notices?: DelayNotice[];
+  cancel_token_hash?: string | null;
+  cancelled_at?: string | null;
+  cancelled_by?: "owner" | "customer" | null;
+  refund_id?: string | null;
+  refunded_amount?: number | null;
 };
+export type DelayNotice = { sentAt: string; shipBy: string; reason: string };
 export type FulfillmentStatus = "needs_ordering" | "ordered" | "shipped" | "delivered" | "cancelled";
 
 export type Database = {

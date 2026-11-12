@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ExternalLink, PackageOpen, Truck } from "lucide-react";
+import { Clock, ExternalLink, PackageOpen, RotateCcw, Truck } from "lucide-react";
 import { ownerPage } from "@/lib/auth";
 import { getStore } from "@/lib/catalog";
 import { fulfillmentCounts, FULFILLMENT_STATUSES, listPhysicalOrders, trackingLink } from "@/lib/fulfillment";
 import { storefrontMediaBase } from "@/lib/storefront";
+import { isOverdue, originalShipBy, promisedShipBy } from "@/lib/order-dates";
 import { formatMoney } from "@/lib/store-config";
 import { AdminShell } from "@/components/admin-shell";
 import { CopyField, FulfillmentActions } from "@/components/fulfillment-actions";
@@ -21,6 +22,8 @@ const TABS: Record<FulfillmentStatus, { label: string; empty: string }> = {
 };
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
+const dayFormat = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+const day = (value: string) => dayFormat.format(new Date(value.length === 10 ? `${value}T12:00:00Z` : value));
 
 function waitingDays(order: Order) {
   return Math.floor((Date.now() - Date.parse(order.created_at)) / 86_400_000);
@@ -32,6 +35,11 @@ function OrderCard({ order, mediaBase }: { order: Order; mediaBase: string }) {
   const status = order.fulfillment_status ?? "needs_ordering";
   const currency = order.currency ?? snapshot?.currency ?? "usd";
   const days = waitingDays(order);
+  const open = status === "needs_ordering" || status === "ordered";
+  const shipBy = promisedShipBy(order);
+  const overdue = isOverdue(order);
+  const notices = order.delay_notices ?? [];
+  const total = order.amount_total !== null ? formatMoney(order.amount_total, currency) : null;
   const entries: [string, string | null][] = address ? [
     ["Name", address.name], ["Phone", address.phone], ["Address line 1", address.line1], ["Address line 2", address.line2],
     ["City", address.city], ["State", address.state], ["ZIP code", address.postal_code], ["Country", address.country],
@@ -46,7 +54,8 @@ function OrderCard({ order, mediaBase }: { order: Order; mediaBase: string }) {
         <p className="muted"><time dateTime={order.created_at}>{dateFormat.format(new Date(order.created_at))} UTC</time> · <a href={`mailto:${order.email}`}>{order.email}</a></p>
       </div>
       <div className="fulfil-card-meta">
-        {status === "needs_ordering" && days >= 2 && <span className="badge warning">Waiting {days} days</span>}
+        {overdue ? <span className="badge danger">Overdue · was due {day(shipBy)}</span>
+          : open ? <span className={`badge ${status === "needs_ordering" && days >= 2 ? "warning" : "pending"}`}>Ship by {day(shipBy)}</span> : null}
         <strong>{order.amount_total !== null ? formatMoney(order.amount_total, currency) : "—"}</strong>
       </div>
     </header>
@@ -64,6 +73,7 @@ function OrderCard({ order, mediaBase }: { order: Order; mediaBase: string }) {
           </div>
         </div>)}
         {snapshot?.shipping && <p className="fulfil-shipping"><Truck size={14} />{snapshot.shipping.name} · {snapshot.shipping.amount ? formatMoney(snapshot.shipping.amount, currency) : "Free"}{snapshot.shipping.maxDays ? ` · promised ${snapshot.shipping.minDays}–${snapshot.shipping.maxDays} business days` : ""}</p>}
+        {notices.map((notice) => <p className="fulfil-shipping" key={notice.sentAt}><Clock size={14} />Delay notice sent {day(notice.sentAt)}: new ship-by {day(notice.shipBy)}{notice.reason ? ` (${notice.reason})` : ""}</p>)}
         {order.tracking_number && <p className="fulfil-shipping">Tracking: <a href={trackingLink(order.tracking_number, order.tracking_url)} target="_blank" rel="noopener noreferrer">{order.tracking_carrier ? `${order.tracking_carrier} ` : ""}{order.tracking_number}</a>{order.tracking_email_sent_at ? " · customer emailed" : " · not emailed yet"}</p>}
       </section>
       <section>
@@ -72,8 +82,13 @@ function OrderCard({ order, mediaBase }: { order: Order; mediaBase: string }) {
       </section>
       <section>
         <h3>Next step</h3>
+        {status === "cancelled" && <p className="fulfil-cancelled"><RotateCcw size={14} />
+          <span>Cancelled{order.cancelled_by === "customer" ? " by the customer" : ""}{order.cancelled_at ? ` on ${day(order.cancelled_at)}` : ""}. {order.refunded_amount != null
+            ? `Refunded ${formatMoney(order.refunded_amount, currency)}.`
+            : "Not refunded: refund the payment in your Stripe dashboard if you haven't already."}</span></p>}
         <FulfillmentActions orderId={order.id} orderRef={order.stripe_session_id.slice(-8).toUpperCase()} customer={(order.customer_name ?? address?.name ?? "").trim()} status={status} supplierRef={order.supplier_order_ref ?? null}
-          tracking={{ number: order.tracking_number ?? null, carrier: order.tracking_carrier ?? null, url: order.tracking_url ?? null, emailed: !!order.tracking_email_sent_at }} />
+          tracking={{ number: order.tracking_number ?? null, carrier: order.tracking_carrier ?? null, url: order.tracking_url ?? null, emailed: !!order.tracking_email_sent_at }}
+          delay={{ shipBy, originalShipBy: originalShipBy(order), notices: notices.length }} total={total} />
       </section>
     </div>
   </article>;

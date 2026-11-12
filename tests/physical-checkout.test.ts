@@ -67,7 +67,7 @@ describe("physical checkout", () => {
       .toEqual([["Free tracked shipping", 0], ["Express", 995]]);
     expect(params.payment_intent_data).toEqual({ statement_descriptor_suffix: "LUMORA CO" });
     expect(params.metadata).toEqual({ app: "veilcode-store", kind: "physical", checkout_id: checkoutId, product_id: "glow-lamp", store_id: STORE_ID });
-    expect(params.success_url).toBe("https://delivery.example.com/s/glow/thank-you");
+    expect(params.success_url).toMatch(/^https:\/\/delivery\.example\.com\/s\/glow\/thank-you\?ref=[0-9a-f-]{36}$/);
     expect(params.cancel_url).toBe("https://delivery.example.com/s/glow?checkout=cancelled");
     // Supplier details stay in the private reservation and never go to Stripe.
     expect(JSON.stringify(params)).not.toContain("supplier");

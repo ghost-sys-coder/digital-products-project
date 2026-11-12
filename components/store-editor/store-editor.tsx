@@ -174,7 +174,7 @@ export function StoreEditor({ data }: { data: StoreEditorData }) {
             <PageBuilder page={draft.page} problem={pageProblem ? { section: pageProblem.section ?? -1, text: pageProblem.text } : null} reveal={reveal}
               onChange={(change) => update((current) => ({ ...current, page: change(current.page) }))} />
           </section>}
-          {tab === "brand" && <BrandTab draft={draft} update={update} />}
+          {tab === "brand" && <BrandTab draft={draft} update={update} serverPixels={data.tiktokServerPixels} />}
           {tab === "shipping" && <ShippingTab draft={draft} update={update} />}
           {tab === "policies" && <PoliciesTab draft={draft} update={update} previewBase={`/s/${saved.slug}`} />}
           {tab === "media" && <section className="workspace-panel form-panel">

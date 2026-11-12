@@ -20,7 +20,7 @@ export type PublicShipping = { name: string; amount: number; minDays: number; ma
 export type Storefront = {
   product: { id: string; slug: string; name: string; tagline: string; description: string; currency: string; draft: boolean };
   theme: ThemeId;
-  brand: { name: string; logo: string | null; accent: string | null; supportEmail: string | null };
+  brand: { name: string; logo: string | null; accent: string | null; supportEmail: string | null; tiktokPixelId: string | null };
   page: StorePage;
   variants: PublicVariant[];
   options: PublicOption[];
@@ -109,7 +109,7 @@ export async function getStorefront(slug: string, { preview = false } = {}): Pro
       description: product.description, currency: product.currency, draft,
     },
     theme: product.theme as ThemeId,
-    brand: { name: brand.name || product.name, logo: brand.logoPath, accent: brand.accent, supportEmail: brand.supportEmail },
+    brand: { name: brand.name || product.name, logo: brand.logoPath, accent: brand.accent, supportEmail: brand.supportEmail, tiktokPixelId: brand.tiktokPixelId },
     page,
     variants: rows.map((row) => ({
       id: row.id, options: row.options ?? {}, label: variantLabel(row.options ?? {}, order),

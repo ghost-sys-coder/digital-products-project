@@ -9,6 +9,7 @@ vi.mock("stripe", async () => {
     prices = { retrieve: fakes.pricesRetrieve, create: fakes.pricesCreate };
     checkout = { sessions: { create: fakes.sessionsCreate, retrieve: fakes.sessionsRetrieve } };
     shippingRates = { retrieve: fakes.shippingRatesRetrieve };
+    refunds = { create: fakes.refundsCreate };
     accounts = { retrieve: fakes.accountsRetrieve };
     oauth = { authorizeUrl: fakes.oauthAuthorizeUrl, token: fakes.oauthToken, deauthorize: fakes.oauthDeauthorize };
   } };

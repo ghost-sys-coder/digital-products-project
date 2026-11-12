@@ -13,6 +13,7 @@ import {
 } from "./store-input";
 import { findPoster, isGeneratedPoster, mediaExtension, mediaKind, mediaUploadProblem, posterPathFor, sniffMedia, STORE_MEDIA_TYPES, type StoreMediaFile } from "./store-media";
 import { storefrontMediaBase } from "./storefront";
+import { pixelsWithServerEvents } from "./tiktok";
 import type { CatalogProduct, ProductVariant, ShippingProfile, ShippingRate } from "./catalog.types";
 
 // The admin editor for physical single-product stores. Every value is validated here before it is
@@ -35,6 +36,8 @@ export type StoreEditorData = {
   profiles: StoreEditorProfile[];
   media: StoreMediaFile[];
   mediaBase: string;
+  /** TikTok pixels with a server access token configured, so purchases are also sent from the server. */
+  tiktokServerPixels: string[];
 };
 
 const conflict = () => new HttpError(409, "This store was changed in another tab or window. Reload to get the latest version, then make your change again.");
@@ -85,7 +88,7 @@ export async function loadStoreEditor(id: string): Promise<StoreEditorData> {
     pageProblem = error instanceof StorePageError ? error.message : "The saved page could not be read.";
   }
   let brand: Brand;
-  try { brand = parseBrand(product.brand, STORE_ID, product.id); } catch { brand = { name: "", logoPath: null, accent: null, supportEmail: null }; }
+  try { brand = parseBrand(product.brand, STORE_ID, product.id); } catch { brand = { name: "", logoPath: null, accent: null, supportEmail: null, tiktokPixelId: null }; }
   const users = (products.data ?? []) as Pick<CatalogProduct, "id" | "name" | "shipping_profile_id">[];
   const allRates = (rates.data ?? []) as ShippingRate[];
 
@@ -109,6 +112,7 @@ export async function loadStoreEditor(id: string): Promise<StoreEditorData> {
     })),
     media,
     mediaBase: storefrontMediaBase(),
+    tiktokServerPixels: pixelsWithServerEvents(),
   };
 }
 
@@ -170,6 +174,9 @@ export async function saveStore(raw: Record<string, unknown>) {
     if (!Array.isArray(submitted) || submitted.length > MAX_PROFILES_PER_SAVE) throw new StoreInputError("Too many shipping profiles in one save.");
     profiles = submitted.map(parseShippingProfile);
     policies = policiesForSave(raw.policies, product.policies, today(), publishing);
+    // Adding or removing a pixel changes what the privacy policy says, so it changes its date too.
+    const previousPixel = (product.brand as { tiktokPixelId?: unknown }).tiktokPixelId ?? null;
+    if (brand.tiktokPixelId !== previousPixel && "version" in policies) policies = { ...policies, updatedAt: today() };
   } catch (error) {
     if (error instanceof StoreInputError || error instanceof StorePageError || error instanceof BrandError) throw new HttpError(400, error.message);
     if (error instanceof PoliciesError) throw new HttpError(400, `Policies: ${error.message}`);

@@ -1,11 +1,11 @@
 "use client";
-import { Check, CreditCard, Palette, RotateCcw } from "lucide-react";
+import { Check, CreditCard, Megaphone, Palette, RotateCcw } from "lucide-react";
 import { contrastRatio, statementSuffix, THEME_TOKENS, THEMES, type ThemeId } from "@/lib/store-themes";
 import { ImagePathField } from "./media";
 import { TextField } from "./fields";
 import type { Draft } from "./draft";
 
-type Props = { draft: Draft; update: (update: (draft: Draft) => Draft) => void };
+type Props = { draft: Draft; update: (update: (draft: Draft) => Draft) => void; serverPixels?: string[] };
 
 /** Four theme cards drawn from the theme's own tokens, so each looks like the store it makes. */
 export function ThemePicker({ value, onChange, accent }: { value: ThemeId; onChange: (theme: ThemeId) => void; accent?: string | null }) {
@@ -26,7 +26,7 @@ export function ThemePicker({ value, onChange, accent }: { value: ThemeId; onCha
   </div>;
 }
 
-export function BrandTab({ draft, update }: Props) {
+export function BrandTab({ draft, update, serverPixels = [] }: Props) {
   const tokens = THEME_TOKENS[draft.theme];
   const accent = draft.brand.accent ?? tokens.accent;
   const validAccent = /^#[0-9a-f]{6}$/i.test(accent);
@@ -56,6 +56,15 @@ export function BrandTab({ draft, update }: Props) {
       <TextField label="Support email" type="email" required max={254} value={draft.brand.supportEmail} placeholder="hello@yourbrand.com" autoComplete="email"
         help="Shown in the footer, policies and order emails. Required before you publish." onChange={(supportEmail) => setBrand({ supportEmail })} />
       <p className="se-note"><CreditCard size={15} aria-hidden /><span>{suffix ? <>Card statements end in <strong>{suffix}</strong>, after your Stripe account&apos;s prefix.</> : "Add a brand name with letters to show it on card statements."}</span></p>
+    </section>
+    <section className="workspace-panel form-panel">
+      <div className="form-section-heading"><span className="step-number"><Megaphone size={15} aria-hidden /></span><div><h2>Ads measurement</h2><p>Let TikTok see views, checkouts and purchases, so your ads optimise for sales.</p></div></div>
+      <TextField label="TikTok pixel ID" optional max={32} value={draft.brand.tiktokPixelId} placeholder="C4ABCD1234EFGH5678IJ"
+        help="In TikTok Ads Manager: Tools › Events › Web events. Leave empty to turn tracking off." onChange={(tiktokPixelId) => setBrand({ tiktokPixelId: tiktokPixelId.trim().toUpperCase() })} />
+      {draft.brand.tiktokPixelId.trim() && <p className="se-note"><span>{serverPixels.includes(draft.brand.tiktokPixelId.trim().toUpperCase())
+        ? "Purchases are also sent from the server, so TikTok counts them even when a browser blocks the pixel."
+        : "Browser events only for now. To also send purchases from the server, add this pixel's Events API access token to TIKTOK_ACCESS_TOKENS in Vercel."}
+        {" "}The privacy policy gains a TikTok section and every page gets a “Your privacy choices” link. Shoppers who opt out, or whose browser sends Global Privacy Control, aren&apos;t tracked.</span></p>}
     </section>
   </>;
 }

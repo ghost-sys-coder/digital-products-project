@@ -3,6 +3,7 @@ import { getSupabase } from "./supabase";
 import { HttpError } from "./http";
 import { STORE_ID } from "./store-config";
 import { sendTrackingEmail, trackingLink } from "./physical-email";
+import { cancelOrder, parseShipBy, sendOrderDelay } from "./order-delays";
 export { trackingLink };
 import type { FulfillmentStatus, Order } from "./database.types";
 
@@ -16,7 +17,8 @@ export type FulfillmentAction =
   | { action: "ordered"; supplierRef: string }
   | { action: "shipped"; carrier: string; trackingNumber: string; trackingUrl: string; notify: boolean }
   | { action: "delivered" }
-  | { action: "cancelled" }
+  | { action: "cancelled"; refund: boolean }
+  | { action: "delay_notice"; shipBy: unknown; reason: string }
   | { action: "resend_tracking" };
 
 /** Which statuses each action may start from. Updating tracking on a shipped order is allowed. */
@@ -25,6 +27,7 @@ const ALLOWED_FROM: Record<FulfillmentAction["action"], FulfillmentStatus[]> = {
   shipped: ["needs_ordering", "ordered", "shipped"],
   delivered: ["shipped"],
   cancelled: ["needs_ordering", "ordered"],
+  delay_notice: ["needs_ordering", "ordered"],
   resend_tracking: ["shipped", "delivered"],
 };
 
@@ -53,7 +56,9 @@ export function parseFulfillmentAction(body: Record<string, unknown>): Fulfillme
       }
       return { action: "shipped", carrier: plain(body.carrier, "Carrier", 60), trackingNumber, trackingUrl, notify: body.notify !== false };
     }
-    case "delivered": case "cancelled": case "resend_tracking": return { action: body.action };
+    case "cancelled": return { action: "cancelled", refund: body.refund === true };
+    case "delay_notice": return { action: "delay_notice", shipBy: body.shipBy, reason: plain(body.reason, "Reason", 300) };
+    case "delivered": case "resend_tracking": return { action: body.action };
     default: throw new HttpError(400, "Unknown fulfilment action.");
   }
 }
@@ -96,6 +101,10 @@ export async function applyFulfillment(orderId: string, expected: FulfillmentSta
     throw new HttpError(409, input.action === "cancelled" ? "Shipped orders can't be cancelled here. Arrange a return, then refund in Stripe." : "That step doesn't apply to this order's current status.");
   }
 
+  // Cancelling (with its refund) and delay notices have their own steps and emails.
+  if (input.action === "cancelled") return cancelOrder(order, "owner", input.refund);
+  if (input.action === "delay_notice") return (await sendOrderDelay(order, { shipBy: parseShipBy(input.shipBy, order), reason: input.reason })).order;
+
   const now = new Date().toISOString();
   let changes: Partial<Order> = {};
   let emailTracking = false;
@@ -115,7 +124,6 @@ export async function applyFulfillment(orderId: string, expected: FulfillmentSta
       break;
     }
     case "delivered": changes = { fulfillment_status: "delivered", delivered_at: now }; break;
-    case "cancelled": changes = { fulfillment_status: "cancelled" }; break;
     case "resend_tracking":
       if (!order.tracking_number) throw new HttpError(409, "Add tracking before sending a tracking email.");
       emailTracking = true;

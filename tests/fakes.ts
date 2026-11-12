@@ -178,6 +178,7 @@ export const pricesCreate = vi.fn();
 export const sessionsCreate = vi.fn();
 export const sessionsRetrieve = vi.fn();
 export const shippingRatesRetrieve = vi.fn();
+export const refundsCreate = vi.fn();
 export const accountsRetrieve = vi.fn();
 export const oauthToken = vi.fn();
 export const oauthDeauthorize = vi.fn();
@@ -188,6 +189,7 @@ export function resetFakes() {
   state.product_variants = []; state.shipping_rates = []; state.shipping_profiles = [];
   shippingRatesRetrieve.mockReset().mockImplementation(async (id: string) => { const rate = state.stripeShippingRates.get(id); if (!rate) throw { code: "resource_missing" }; return { ...rate }; });
   state.stripeShippingRates.clear();
+  refundsCreate.mockReset().mockImplementation(async (input: Row) => ({ id: "re_test_1", amount: 10795, payment_intent: input.payment_intent, status: "succeeded" }));
   state.stores = [{ id: STORE_ID, owner_user_id: OWNER_ID, name: "VeilCode Studio", tagline: "Good systems. Better work.", bio: "Practical studio tools.", support_email: "support@veilcode.studio", website_url: "https://veilcode.studio" }];
   state.dbError = false; state.insertError = null; state.markSentError = false;
   state.stripeProducts.clear(); state.stripePrices.clear(); state.sessions.clear();
