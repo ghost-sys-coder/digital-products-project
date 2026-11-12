@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Ban, Check, Copy, PackageCheck, Send, ShoppingCart, Truck } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { FulfillmentStatus } from "@/lib/database.types";
 
 /** Click to copy one value, for pasting into a supplier's checkout form. */
@@ -13,15 +14,40 @@ export function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 type Props = {
-  orderId: string; status: FulfillmentStatus; supplierRef: string | null;
+  orderId: string; orderRef: string; customer: string; status: FulfillmentStatus; supplierRef: string | null;
   tracking: { number: string | null; carrier: string | null; url: string | null; emailed: boolean };
 };
 
-export function FulfillmentActions({ orderId, status, supplierRef, tracking }: Props) {
+/** Confirms a cancellation; stays open while it saves so the owner sees it finish. */
+function CancelOrderDialog({ open, onOpenChange, orderRef, customer, pending, onConfirm, returnFocus }: {
+  open: boolean; onOpenChange: (open: boolean) => void; orderRef: string; customer: string;
+  pending: boolean; onConfirm: () => void; returnFocus: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const keepRef = useRef<HTMLButtonElement>(null);
+  return <AlertDialog open={open} onOpenChange={(next) => { if (!pending) onOpenChange(next); }}>
+    <AlertDialogContent className="confirm-dialog" initialFocus={keepRef} finalFocus={returnFocus}>
+      <div className="confirm-dialog-icon danger" aria-hidden="true"><Ban size={22} /></div>
+      <AlertDialogHeader>
+        <AlertDialogTitle>Cancel order {orderRef}?</AlertDialogTitle>
+        <AlertDialogDescription>
+          {customer ? `${customer}'s order` : "This order"} moves to Cancelled and can&apos;t be shipped from here. Cancelling doesn&apos;t refund the customer: refund the payment in your Stripe dashboard, then let them know.
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel ref={keepRef} className="button secondary" disabled={pending}>Keep order</AlertDialogCancel>
+        <AlertDialogAction type="button" className="button danger" disabled={pending} onClick={onConfirm} aria-label={pending ? "Cancelling order" : "Cancel order"}><Ban size={15} />{pending ? "Cancelling…" : "Cancel order"}</AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>;
+}
+
+export function FulfillmentActions({ orderId, orderRef, customer, status, supplierRef, tracking }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; failed: boolean } | null>(null);
   const [showTracking, setShowTracking] = useState(status === "ordered");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const cancelButton = useRef<HTMLButtonElement>(null);
 
   async function send(action: string, fields: Record<string, unknown> = {}, success = "Saved.") {
     setPending(action); setMessage(null);
@@ -60,9 +86,12 @@ export function FulfillmentActions({ orderId, status, supplierRef, tracking }: P
     </form>
   );
 
-  const cancel = <button type="button" className="button secondary small fulfil-cancel" disabled={!!pending} onClick={() => {
-    if (window.confirm("Cancel this order? This doesn't refund the customer: refund the payment in your Stripe dashboard.")) send("cancelled", {}, "Order cancelled. Remember to refund it in Stripe.");
-  }}><Ban size={14} />Cancel order</button>;
+  const cancel = <>
+    <button type="button" ref={cancelButton} className="button secondary small fulfil-cancel" disabled={!!pending} onClick={() => setConfirmCancel(true)}><Ban size={14} />Cancel order</button>
+    <CancelOrderDialog open={confirmCancel} onOpenChange={setConfirmCancel} orderRef={orderRef} customer={customer}
+      pending={pending === "cancelled"} returnFocus={cancelButton}
+      onConfirm={async () => { await send("cancelled", {}, "Order cancelled. Remember to refund it in Stripe."); setConfirmCancel(false); }} />
+  </>;
 
   return <div className="fulfil-actions">
     {status === "needs_ordering" && <>

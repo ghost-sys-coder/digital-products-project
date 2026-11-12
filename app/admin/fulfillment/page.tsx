@@ -72,7 +72,7 @@ function OrderCard({ order, mediaBase }: { order: Order; mediaBase: string }) {
       </section>
       <section>
         <h3>Next step</h3>
-        <FulfillmentActions orderId={order.id} status={status} supplierRef={order.supplier_order_ref ?? null}
+        <FulfillmentActions orderId={order.id} orderRef={order.stripe_session_id.slice(-8).toUpperCase()} customer={(order.customer_name ?? address?.name ?? "").trim()} status={status} supplierRef={order.supplier_order_ref ?? null}
           tracking={{ number: order.tracking_number ?? null, carrier: order.tracking_carrier ?? null, url: order.tracking_url ?? null, emailed: !!order.tracking_email_sent_at }} />
       </section>
     </div>
