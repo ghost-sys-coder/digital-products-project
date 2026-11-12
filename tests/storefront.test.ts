@@ -181,7 +181,7 @@ describe("per-purchase Stripe checkout and delivery", () => {
       success_url: "https://delivery.example.com/thank-you", cancel_url: "https://delivery.example.com/p/studio-kit?checkout=cancelled",
     }), { idempotencyKey: `checkout-${checkoutId}` });
     expect(sessionsCreate.mock.calls[0][0]).not.toHaveProperty("payment_method_types");
-    expect(state.checkouts[0].product_snapshot.storagePath).toBe(product.storage_path);
+    expect(state.checkouts[0].product_snapshot?.storagePath).toBe(product.storage_path);
   });
   it("reuses an open checkout for the same request", async () => {
     const product = seedProduct(); const id = randomUUID();

@@ -49,3 +49,6 @@ package-lock.json
 # Supabase CLI link state (local only)
 supabase/.temp/*
 !supabase/.temp/cli-latest
+
+# Reference screenshots of other stores: never commit or serve them.
+public/store-examples/

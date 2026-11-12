@@ -1,7 +1,7 @@
 import "server-only";
 import { getSupabase } from "./supabase";
 import { STORE_ID } from "./store-config";
-import type { CatalogProduct, DeliveryProduct } from "./catalog.types";
+import type { CatalogProduct, DeliveryProduct, ProductKind } from "./catalog.types";
 import { getProduct } from "./products";
 
 export async function getStore() {
@@ -9,9 +9,10 @@ export async function getStore() {
   if (error || !data) throw new Error("Store unavailable. Apply the storefront migration.");
   return data;
 }
-export async function listProducts(published = false) {
+export async function listProducts(published = false, kind?: ProductKind) {
   let query = getSupabase().from("products").select("*").eq("store_id", STORE_ID);
   if (published) query = query.eq("status", "published");
+  if (kind) query = query.eq("kind", kind);
   const { data, error } = await query.order("sort_order").order("created_at", { ascending: false });
   if (error) throw new Error("Could not load products");
   return data ?? [];
@@ -21,9 +22,10 @@ export async function getCatalogProduct(id: string) {
   if (error) throw new Error("Could not load product");
   return data;
 }
-export async function getPublicProduct(slug: string) {
+/** Published product of one kind: /p/<slug> serves digital, /s/<slug> serves physical stores. */
+export async function getPublicProduct(slug: string, kind: ProductKind = "digital") {
   const { data, error } = await getSupabase().from("products").select("*")
-    .eq("store_id", STORE_ID).eq("slug", slug).eq("status", "published").maybeSingle();
+    .eq("store_id", STORE_ID).eq("slug", slug).eq("status", "published").eq("kind", kind).maybeSingle();
   if (error) throw new Error("Could not load product");
   return data;
 }

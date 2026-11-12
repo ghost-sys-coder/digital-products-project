@@ -13,7 +13,7 @@ export default async function Home() {
   let store;
   let products;
   try {
-    [store, products] = await Promise.all([getStore(), listProducts(true)]);
+    [store, products] = await Promise.all([getStore(), listProducts(true, "digital")]);
   } catch {
     return (
       <div className="store-page">

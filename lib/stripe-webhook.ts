@@ -10,6 +10,7 @@ import { snapshotProduct, getCatalogProduct } from "@/lib/catalog";
 import type { DeliveryProduct } from "@/lib/catalog.types";
 import { findAccountConnection, refreshConnection, stripeLivemode } from "./payment-connections";
 import { getSupabase } from "./supabase";
+import { recordPhysicalOrder } from "./physical-orders";
 
 export async function handleStripeWebhook(req: Request, connected = false) {
   const env = getEnv();
@@ -65,6 +66,20 @@ export async function handleStripeWebhook(req: Request, connected = false) {
           (checkout.payment_connection_id ?? null) !== (connection?.id ?? null) ||
           (checkout.checkout_origin && checkout.checkout_origin !== new URL(env.APP_URL).origin)) {
         console.warn("Checkout does not match its reserved purchase", { sessionId: session.id });
+        return Response.json({ received: true });
+      }
+      if (checkout.kind === "physical") {
+        // Physical goods are shipped, never downloaded: record the order for fulfilment instead.
+        if (!checkout.physical_snapshot || session.metadata.kind !== "physical") {
+          console.warn("Physical checkout does not match its reservation", { sessionId: session.id });
+          return Response.json({ received: true });
+        }
+        await bindCheckoutSession(checkout.id, session.id, connection?.store_id);
+        await recordPhysicalOrder(session, checkout, email, connection);
+        return Response.json({ received: true });
+      }
+      if (!checkout.product_snapshot) {
+        console.warn("Digital checkout has no product snapshot", { sessionId: session.id });
         return Response.json({ received: true });
       }
       productId = checkout.product_id;

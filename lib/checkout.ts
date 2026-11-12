@@ -28,10 +28,12 @@ export async function startCheckout(productId: string, checkoutId: string) {
   const options = stripeOptions(context);
   let checkout = await findCheckout(checkoutId);
   if (checkout && checkout.product_id !== productId) throw new HttpError(409, "Start a new checkout for this product.");
+  if (checkout && ((checkout.kind ?? "digital") !== "digital" || !checkout.product_snapshot || !checkout.stripe_price_id)) throw new HttpError(409, "Start a new checkout for this product.");
   if (checkout && (checkout.payment_connection_id ?? null) !== context.connectionId) throw new HttpError(409, "The store's payment account changed. Reload to start a new checkout.");
   const product = await getCatalogProduct(productId);
-  if (!product || product.status !== "published" || !product.price_amount || (!context.accountId && !product.stripe_price_id)) throw new HttpError(404, "This product is not available.");
-  await assertDownloadAvailable(checkout?.product_snapshot.storagePath ?? product.storage_path, "This product's download is temporarily unavailable. Please contact the studio before purchasing.");
+  // Physical products check out through lib/physical-checkout.ts, never this digital path.
+  if (!product || (product.kind ?? "digital") !== "digital" || product.status !== "published" || !product.price_amount || (!context.accountId && !product.stripe_price_id)) throw new HttpError(404, "This product is not available.");
+  await assertDownloadAvailable(checkout?.product_snapshot?.storagePath ?? product.storage_path, "This product's download is temporarily unavailable. Please contact the studio before purchasing.");
   if (checkout?.stripe_session_id) {
     const existing = await stripe.checkout.sessions.retrieve(checkout.stripe_session_id, {}, options);
     if (existing.status !== "open" || !existing.url) throw new HttpError(409, "This checkout has ended. Reload the page to start again.");
@@ -54,6 +56,7 @@ export async function startCheckout(productId: string, checkoutId: string) {
     checkout = data ?? await findCheckout(checkoutId);
     if (!checkout || checkout.product_id !== productId || (checkout.payment_connection_id ?? null) !== context.connectionId) throw new HttpError(409, "Start a new checkout.");
   }
+  if (!checkout.stripe_price_id) throw new HttpError(409, "Start a new checkout.");
   // Backfill existing products and renew cover links before creating Checkout.
   if (!context.accountId) await refreshCheckoutProductDetails(product);
   // Eight letters derived from the random UUID, stable across Stripe retries.

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "stripe:listen": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/stripe-listen.mjs",
     "orders:recover": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/recover-paid-orders.mjs",
-    "env:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-environment.mjs",    "build": "next build",
+    "env:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-environment.mjs",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -38,5 +39,12 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "4.1.12"
-  }
+  },
+  "browserslist": [
+    "chrome 111",
+    "edge 111",
+    "firefox 111",
+    "safari 16.4",
+    "ios_saf 16.4"
+  ]
 }
