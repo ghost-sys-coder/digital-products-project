@@ -5,6 +5,7 @@ import { STORE_ID } from "./store-config";
 import { ownerUser } from "./auth";
 import { parseStorePage, type StorePage } from "./store-page";
 import { parseBrand, THEMES, type ThemeId } from "./store-themes";
+import { parseStorePolicies, type StorePolicies } from "./store-policies";
 import type { CatalogProduct, ProductVariant, ShippingRate } from "./catalog.types";
 
 // Everything a /s/<slug> page needs, reduced to what is safe to send to a browser.
@@ -24,6 +25,8 @@ export type Storefront = {
   variants: PublicVariant[];
   options: PublicOption[];
   shipping: PublicShipping[];
+  /** Null until the owner completes them; checkout refuses a store without policies. */
+  policies: StorePolicies | null;
   /** Base URL of the public storefront bucket; media paths are validated, so they can be appended. */
   mediaBase: string;
 };
@@ -96,6 +99,8 @@ export async function getStorefront(slug: string, { preview = false } = {}): Pro
   const rows = (variantsResult.data ?? []) as ProductVariant[];
   const mediaBase = storefrontMediaBase();
   const options = publicOptions(rows);
+  let policies: StorePolicies | null = null;
+  try { policies = parseStorePolicies(product.policies); } catch { policies = null; }
   const order = options.map((option) => option.name);
 
   return {
@@ -112,6 +117,7 @@ export async function getStorefront(slug: string, { preview = false } = {}): Pro
       image: row.image_path && row.image_path.startsWith(`${product.store_id}/${product.id}/`) && /^[A-Za-z0-9/_.-]+$/.test(row.image_path) && !row.image_path.includes("..") ? row.image_path : null,
     })),
     options,
+    policies,
     shipping: ((ratesResult.data ?? []) as ShippingRate[]).map((rate) => ({ name: rate.name, amount: rate.amount, minDays: rate.min_days, maxDays: rate.max_days })),
     mediaBase,
   };

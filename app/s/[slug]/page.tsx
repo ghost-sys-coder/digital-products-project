@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { Lock } from "lucide-react";
 import { getStorefront, type Storefront } from "@/lib/storefront";
-import { themeVariables, THEME_TOKENS } from "@/lib/store-themes";
 import { ProductHero } from "@/components/storefront/product-hero";
 import { StoreSection } from "@/components/storefront/sections";
-import { storeFontVariables } from "./fonts";
+import { StoreFrame } from "@/components/storefront/store-frame";
 import "./storefront.css";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +48,6 @@ export default async function StorePage(props: Params) {
 
   const sections = store.page.sections.filter((section) => section.enabled);
   const announcement = sections.find((section) => section.type === "announcement");
-  const tokens = THEME_TOKENS[store.theme];
   const lowest = Math.min(...store.variants.map((variant) => variant.price));
   const variesInPrice = store.variants.some((variant) => variant.price !== lowest);
   const priceLabel = `${variesInPrice ? "from " : ""}${money(lowest, store.product.currency)}`;
@@ -65,20 +61,7 @@ export default async function StorePage(props: Params) {
   ].filter((item): item is { href: string; label: string } => item !== null);
 
   return (
-    <div className={`st ${storeFontVariables}`} data-theme={store.theme} data-dark={tokens.dark || undefined} style={themeVariables(store.theme, store.brand) as React.CSSProperties}>
-      {store.product.draft && <p className="st-draft" role="note">Draft preview · only you can see this page</p>}
-      {announcement?.type === "announcement" && <p className="st-announcement">{announcement.data.text}</p>}
-      <header className="st-header">
-        <div className="st-shell st-header-inner">
-          <a className="st-logo" href="#top" aria-label={`${store.brand.name} home`}>
-            {store.brand.logo
-              ? <Image src={store.mediaBase + store.brand.logo} alt={store.brand.name} width={160} height={40} preload />
-              : <span>{store.brand.name}</span>}
-          </a>
-          {nav.length > 0 && <nav className="st-nav" aria-label="Page sections">{nav.map((item) => <a key={item.href} href={item.href}>{item.label}</a>)}</nav>}
-          <a className="st-button small" href="#buy">Shop now</a>
-        </div>
-      </header>
+    <StoreFrame store={store} nav={nav} announcement={announcement?.type === "announcement" ? announcement.data.text : undefined} onStorePage>
       <main id="top">
         {query.checkout === "cancelled" && <p className="st-shell st-notice" role="status">Checkout was cancelled and you haven&apos;t been charged.</p>}
         {sections.map((section) => section.type === "hero"
@@ -88,16 +71,6 @@ export default async function StorePage(props: Params) {
               shipping={store.shipping} currency={store.product.currency} mediaBase={store.mediaBase} draft={store.product.draft} />
           : <StoreSection key={section.id} section={section} ctx={ctx} />)}
       </main>
-      <footer className="st-footer">
-        <div className="st-shell st-footer-inner">
-          <div>
-            <p className="st-footer-brand">{store.brand.name}</p>
-            {store.brand.supportEmail && <p>Questions? <a href={`mailto:${store.brand.supportEmail}`}>{store.brand.supportEmail}</a></p>}
-          </div>
-          <p className="st-footer-secure"><Lock size={15} aria-hidden /> Secure checkout powered by Stripe</p>
-          <p className="st-footer-copy">© {new Date().getFullYear()} {store.brand.name}</p>
-        </div>
-      </footer>
-    </div>
+    </StoreFrame>
   );
 }

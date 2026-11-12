@@ -96,7 +96,8 @@ The goal is a premium store that can take a real US order and get it to the cust
 - [x] Checkout with variant, quantity, shipping address (US), and shipping options. The checkout reservation keeps a copy of exactly what was bought.
 - [x] Webhook fulfilment for physical orders: an order confirmation email instead of a download link, and the order created as **Needs ordering**.
 - [x] Fulfilment queue in admin, and tracking emails.
-- [ ] Policy pages and the publish checks above.
+- [x] Policy pages and the publish checks above. Generated from per-store settings plus live shipping rates (`lib/store-policies.ts`); checkout refuses an incomplete store and the database refuses to publish one without policies.
+- [x] Videos (with posters and sound toggle) and GIFs across store sections.
 - [ ] Admin editor for physical products: variants, brand, theme, page sections, media uploads, shipping profiles.
 - [ ] **TikTok pixel and server-side purchase events**, so TikTok ads can optimise for sales. US traffic first, so no cookie banner yet.
 

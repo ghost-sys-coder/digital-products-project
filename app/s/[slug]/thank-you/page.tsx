@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { CircleCheck, Mail, PackageCheck, Truck } from "lucide-react";
 import { getStorefront } from "@/lib/storefront";
-import { themeVariables, THEME_TOKENS } from "@/lib/store-themes";
-import { storeFontVariables } from "../fonts";
+import { StoreFrame } from "@/components/storefront/store-frame";
 import "../storefront.css";
 
 export const dynamic = "force-dynamic";
@@ -20,21 +18,17 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function ThankYouPage({ params }: Params) {
   const store = await getStorefront((await params).slug);
   if (!store) notFound();
-  const fastest = [...store.shipping].sort((a, b) => a.maxDays - b.maxDays)[0];
+  // Total time from ordering: processing (from the store's policies) plus the shipping option's transit time.
+  const processing = store.policies?.processingDays ?? { min: 0, max: 0 };
+  const earliest = store.shipping.length ? processing.min + Math.min(...store.shipping.map((rate) => rate.minDays)) : 0;
+  const latest = store.shipping.length ? processing.max + Math.max(...store.shipping.map((rate) => rate.maxDays)) : 0;
   const steps = [
     { icon: Mail, title: "Confirmation on its way", text: "We've emailed your receipt and order details. Check your spam folder if it isn't there in a few minutes." },
     { icon: PackageCheck, title: "We prepare your order", text: "Your order is packed and handed to the carrier." },
-    { icon: Truck, title: "Tracking by email", text: fastest ? `You'll get a tracking link when it ships. Delivery usually takes ${fastest.minDays}–${Math.max(...store.shipping.map((rate) => rate.maxDays))} business days, depending on the shipping you chose.` : "You'll get a tracking link as soon as it ships." },
+    { icon: Truck, title: "Tracking by email", text: latest ? `You'll get a tracking link when it ships. Most orders arrive ${earliest}–${latest} business days after ordering, depending on the shipping you chose.` : "You'll get a tracking link as soon as it ships." },
   ];
   return (
-    <div className={`st ${storeFontVariables}`} data-theme={store.theme} data-dark={THEME_TOKENS[store.theme].dark || undefined} style={themeVariables(store.theme, store.brand) as React.CSSProperties}>
-      <header className="st-header">
-        <div className="st-shell st-header-inner">
-          <a className="st-logo" href={`/s/${store.product.slug}`} aria-label={`${store.brand.name} home`}>
-            {store.brand.logo ? <Image src={store.mediaBase + store.brand.logo} alt={store.brand.name} width={160} height={40} /> : <span>{store.brand.name}</span>}
-          </a>
-        </div>
-      </header>
+    <StoreFrame store={store}>
       <main className="st-section st-thanks">
         <div className="st-shell narrow">
           <span className="st-icon large st-thanks-mark"><CircleCheck size={32} strokeWidth={1.6} aria-hidden /></span>
@@ -49,6 +43,6 @@ export default async function ThankYouPage({ params }: Params) {
           </div>
         </div>
       </main>
-    </div>
+    </StoreFrame>
   );
 }

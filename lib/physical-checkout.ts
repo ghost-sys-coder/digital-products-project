@@ -9,6 +9,7 @@ import { bindCheckoutSession, findCheckout } from "./checkout";
 import { paymentContext, stripeOptions } from "./payment-connections";
 import { parseBrand } from "./store-themes";
 import { parseStorePage, storePageReadiness } from "./store-page";
+import { storeReadinessProblems } from "./store-policies";
 import { publicOptions, storefrontMediaBase, variantLabel } from "./storefront";
 import type { Checkout, PhysicalSnapshot, ProductVariant, ShippingRate } from "./catalog.types";
 
@@ -68,8 +69,9 @@ export async function startPhysicalCheckout(input: PhysicalCheckoutRequest) {
 
   if (!checkout) {
     let brand;
+    let pageProblems: string[];
     try {
-      if (storePageReadiness(parseStorePage(product.page, product.store_id, product.id)).length) throw new Error("Store page incomplete");
+      pageProblems = storePageReadiness(parseStorePage(product.page, product.store_id, product.id));
       brand = parseBrand(product.brand, product.store_id, product.id);
     } catch {
       throw new HttpError(503, "This store is being updated. Please try again shortly.");
@@ -77,6 +79,12 @@ export async function startPhysicalCheckout(input: PhysicalCheckoutRequest) {
     const [variant, rates] = await Promise.all([loadVariant(product.id, input.variantId), loadRates(product.shipping_profile_id)]);
     if (!variant) throw new HttpError(409, "That option is no longer available. Please reload the page.");
     if (!rates.length) throw new HttpError(503, "Shipping is temporarily unavailable for this product.");
+    // A store takes payments only once it is complete, policies included.
+    const problems = storeReadinessProblems({ pageProblems, activeVariants: 1, usRates: rates.length, supportEmail: brand.supportEmail, policies: product.policies });
+    if (problems.length) {
+      console.warn("Checkout refused: store is not ready", { productId: product.id, problems });
+      throw new HttpError(503, "This store is being updated. Please try again shortly.");
+    }
 
     const { data: siblings, error: siblingError } = await getSupabase().from("product_variants").select("options")
       .eq("store_id", STORE_ID).eq("product_id", product.id).eq("active", true);

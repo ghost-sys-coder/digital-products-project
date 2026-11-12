@@ -206,6 +206,7 @@ export function seedPhysicalStore(overrides: Partial<CatalogProduct> = {}) {
     stripe_price_id: null, stripe_product_id: null, storage_path: null, download_filename: null, shipping_profile_id: "profile-1",
     brand: { name: "Lumora Co.", supportEmail: "help@lumora.example" },
     page: { version: 1, sections: [{ id: "hero", type: "hero", data: { headline: "Glow", media: [{ path: `${PHYSICAL_PREFIX}media/a.webp`, kind: "image", alt: "Lamp" }] } }] },
+    policies: { version: 1, sellerName: "Lumora Co. Ltd", sellerAddress: "", processingDays: { min: 1, max: 3 }, returnWindowDays: 30, returnShippingPaidBy: "customer", refundDays: 5, lostParcelDays: 14, responseTime: "", governingLaw: "the State of Delaware, USA", extra: {}, updatedAt: "2026-11-12" },
     ...overrides,
   });
   const now = new Date().toISOString();

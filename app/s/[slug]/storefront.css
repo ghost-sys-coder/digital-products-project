@@ -505,6 +505,23 @@ html:has(.st) { scroll-behavior: smooth; scroll-padding-top: 84px; }
   .st-compare-table thead .ours { color: color-mix(in srgb, var(--st-accent) 75%, var(--st-text)); }
 }
 
+/* Policy pages and footer links */
+.st-footer-policies { position: relative; display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 22px; padding-top: 18px; font-size: 13px; }
+.st-footer-policies::before { content: ""; position: absolute; top: 0; left: clamp(16px, 4vw, 40px); right: clamp(16px, 4vw, 40px); border-top: 1px solid var(--st-border); }
+.st-footer-policies a { color: var(--st-muted); text-decoration: none; }
+.st-footer-policies a:hover { color: var(--st-text); text-decoration: underline; }
+.st-policy h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); margin-bottom: 18px; }
+.st-policy .st-lede { max-width: 60ch; }
+.st-policy-updated { margin-top: 14px; color: var(--st-muted); font-size: 13px; }
+.st-policy section { margin-top: 40px; }
+.st-policy section h2 { font-size: clamp(1.3rem, 2.2vw, 1.6rem); margin-bottom: 12px; }
+.st-policy section p { max-width: 68ch; color: var(--st-muted); font-size: 1.02rem; }
+.st-policy section p + p { margin-top: 12px; }
+.st-policy .st-table-wrap { margin-top: 18px; }
+.st-policy-nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--st-border); }
+.st-policy-nav a { padding: 8px 14px; border: 1px solid var(--st-border); border-radius: var(--st-button-radius); font-size: 14px; text-decoration: none; }
+.st-policy-nav a:hover { border-color: var(--st-text); }
+
 /* Store videos: the wrapper fills its frame; clips meant to be watched get a sound toggle. */
 .st-video-wrap { position: relative; width: 100%; height: 100%; }
 .st-gallery-slide .st-video-wrap video, .st-feature-visual .st-video-wrap video { width: 100%; height: 100%; object-fit: cover; }

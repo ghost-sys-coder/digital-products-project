@@ -23,6 +23,8 @@ export type CatalogProduct = {
   // Physical single-product stores. Digital products keep the defaults.
   kind: ProductKind; theme: string | null; brand: Record<string, unknown>;
   page: Record<string, unknown> | null; shipping_profile_id: string | null;
+  /** Policy settings for physical stores; see lib/store-policies.ts. */
+  policies?: Record<string, unknown>;
 };
 export type ProductVariant = {
   id: string; store_id: string; product_id: string; position: number;
