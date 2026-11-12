@@ -45,7 +45,7 @@ describe("Stripe fulfillment", () => {
     const order = state.orders[0];
     expect(order).toMatchObject({ email_status: "sent", amount_total: 2900, currency: "usd", max_downloads: 5, delivery_lock_id: null });
     expect(order.email_sent_at).toBeTruthy();
-    expect(Date.parse(order.token_expires_at)).toBeGreaterThanOrEqual(before + 14 * 86400_000);
+    expect(Date.parse(order.token_expires_at!)).toBeGreaterThanOrEqual(before + 14 * 86400_000);
     const [email, options] = sendEmail.mock.calls[0];
     expect(email).toMatchObject({ from: "VeilCode Studio <orders@mail.veilcode.studio>", replyTo: "support@veilcode.studio", to: "buyer@example.com", subject: "Your Lead to Kickoff kit is ready" });
     expect(email.html).toContain("00 Start Here");
@@ -54,7 +54,7 @@ describe("Stripe fulfillment", () => {
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(order.download_token_hash).toBe(hashToken(token));
     expect(JSON.stringify(order)).not.toContain(token);
-    expect(options.idempotencyKey).toBe(`delivery-cs_test_purchase-${order.download_token_hash.slice(0, 16)}`);
+    expect(options.idempotencyKey).toBe(`delivery-cs_test_purchase-${order.download_token_hash!.slice(0, 16)}`);
   });
 
   it("does not send twice when the event is replayed", async () => {

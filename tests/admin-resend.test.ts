@@ -27,7 +27,7 @@ describe("support resends", () => {
     expect(await response.json()).toEqual({ ok: true, email: "corrected@example.com" });
     expect(order).toMatchObject({ email: "corrected@example.com", download_count: 0, email_status: "sent", delivery_lock_id: null });
     expect(order.download_token_hash).not.toBe(oldHash);
-    expect(Date.parse(order.token_expires_at)).toBeGreaterThanOrEqual(before + 14 * 86400_000);
+    expect(Date.parse(order.token_expires_at!)).toBeGreaterThanOrEqual(before + 14 * 86400_000);
     expect(sendEmail.mock.calls[0][0].to).toBe("corrected@example.com");
   });
 

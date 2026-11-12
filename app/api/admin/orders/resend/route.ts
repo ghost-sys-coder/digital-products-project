@@ -14,6 +14,8 @@ export async function POST(req: Request) {
         (body.email && (typeof body.email !== "string" || body.email.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(body.email)))) throw new HttpError(400, "Enter a valid order and email.");
     const order = await findOrder(body.sessionId);
     if (!order || order.store_id !== STORE_ID) throw new HttpError(404, "Order not found.");
+    // Physical orders have no download link to resend.
+    if (order.kind === "physical") throw new HttpError(409, "This order ships to the customer, so there is no download to resend.");
     await deliverOrder({ order, force: true, email: typeof body.email === "string" ? body.email : undefined });
     return Response.json({ ok: true });
   } catch (error) { return apiError(error instanceof DeliveryBusyError ? new HttpError(409, "Delivery is in progress. Try again shortly.") : error); }

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { vi } from "vitest";
 import type { Order } from "../lib/orders";
-import type { CatalogProduct, Checkout, Store } from "../lib/catalog.types";
+import type { CatalogProduct, Checkout, ProductVariant, ShippingRate, Store } from "../lib/catalog.types";
 import { STORE_ID } from "../lib/store-config";
 import type { PaymentConnection, PaymentOAuthAttempt, ProductPaymentRef } from "../lib/payment.types";
 
@@ -12,8 +12,9 @@ export const OWNER_ID = "975ac870-5ab8-43a5-9d70-c051c42fc61f";
 export const state = {
   orders: [] as Order[], products: [] as CatalogProduct[], checkouts: [] as Checkout[], stores: [] as Store[],
   payment_connections: [] as PaymentConnection[], payment_oauth_attempts: [] as PaymentOAuthAttempt[], product_payment_refs: [] as ProductPaymentRef[],
+  product_variants: [] as ProductVariant[], shipping_rates: [] as ShippingRate[],
   dbError: false, insertError: null as DbError, markSentError: false,
-  stripeProducts: new Map<string, Row>(), stripePrices: new Map<string, Row>(), sessions: new Map<string, Row>(),
+  stripeProducts: new Map<string, Row>(), stripePrices: new Map<string, Row>(), sessions: new Map<string, Row>(), stripeShippingRates: new Map<string, Row>(),
 };
 export function seedOrder(overrides: Partial<Order> = {}): Order {
   const order: Order = {
@@ -41,7 +42,7 @@ export function seedProduct(overrides: Partial<CatalogProduct> = {}): CatalogPro
   return product;
 }
 function rows(table: string): Row[] {
-  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs"].includes(table)) throw new Error(`Unexpected table: ${table}`);
+  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs", "product_variants", "shipping_rates"].includes(table)) throw new Error(`Unexpected table: ${table}`);
   return state[table as "orders"] as unknown as Row[];
 }
 class Query implements PromiseLike<Result> {
@@ -118,7 +119,7 @@ export const rpc = vi.fn(async (name: string, args: Row) => {
     return { data: connection.id, error: null };
   }
   if (name === "consume_download") {
-    const order = state.orders.find((order) => order.download_token_hash === args.p_token_hash && order.download_count < order.max_downloads && Date.parse(order.token_expires_at) > Date.now());
+    const order = state.orders.find((order) => order.download_token_hash === args.p_token_hash && order.download_count < order.max_downloads && Date.parse(order.token_expires_at ?? "") > Date.now());
     if (!order) return { data: [], error: null };
     order.download_count++;
     return { data: [{ product_id: order.product_id, product_snapshot: order.product_snapshot }], error: null };
@@ -149,6 +150,7 @@ export const pricesRetrieve = vi.fn();
 export const pricesCreate = vi.fn();
 export const sessionsCreate = vi.fn();
 export const sessionsRetrieve = vi.fn();
+export const shippingRatesRetrieve = vi.fn();
 export const accountsRetrieve = vi.fn();
 export const oauthToken = vi.fn();
 export const oauthDeauthorize = vi.fn();
@@ -156,6 +158,9 @@ export const oauthAuthorizeUrl = vi.fn();
 export function resetFakes() {
   state.orders = []; state.products = []; state.checkouts = [];
   state.payment_connections = []; state.payment_oauth_attempts = []; state.product_payment_refs = [];
+  state.product_variants = []; state.shipping_rates = [];
+  shippingRatesRetrieve.mockReset().mockImplementation(async (id: string) => { const rate = state.stripeShippingRates.get(id); if (!rate) throw { code: "resource_missing" }; return { ...rate }; });
+  state.stripeShippingRates.clear();
   state.stores = [{ id: STORE_ID, owner_user_id: OWNER_ID, name: "VeilCode Studio", tagline: "Good systems. Better work.", bio: "Practical studio tools.", support_email: "support@veilcode.studio", website_url: "https://veilcode.studio" }];
   state.dbError = false; state.insertError = null; state.markSentError = false;
   state.stripeProducts.clear(); state.stripePrices.clear(); state.sessions.clear();
@@ -191,4 +196,28 @@ export function resetFakes() {
   getUser.mockReset().mockResolvedValue({ data: { user: { id: OWNER_ID, email: "owner@example.com" } }, error: null });
   signIn.mockReset().mockResolvedValue({ data: { user: { id: OWNER_ID }, session: { access_token: "owner-token", expires_in: 3600 } }, error: null });
   signOut.mockReset().mockResolvedValue({ error: null });
+}
+
+const PHYSICAL_ID = "glow-lamp";
+export const PHYSICAL_PREFIX = `${STORE_ID}/${PHYSICAL_ID}/`;
+export function seedPhysicalStore(overrides: Partial<CatalogProduct> = {}) {
+  const product = seedProduct({
+    id: PHYSICAL_ID, slug: "glow", name: "Glow Lamp", kind: "physical", theme: "bold-dark", price_amount: null,
+    stripe_price_id: null, stripe_product_id: null, storage_path: null, download_filename: null, shipping_profile_id: "profile-1",
+    brand: { name: "Lumora Co.", supportEmail: "help@lumora.example" },
+    page: { version: 1, sections: [{ id: "hero", type: "hero", data: { headline: "Glow", media: [{ path: `${PHYSICAL_PREFIX}media/a.webp`, kind: "image", alt: "Lamp" }] } }] },
+    ...overrides,
+  });
+  const now = new Date().toISOString();
+  const variant = (id: string, position: number, color: string, price: number): ProductVariant => ({
+    id, store_id: STORE_ID, product_id: product.id, position, options: { Color: color }, sku: `GLW-${color}`,
+    price_amount: price, compare_at_amount: null, image_path: `${PHYSICAL_PREFIX}media/${color.toLowerCase()}.webp`, active: true,
+    supplier_url: "https://supplier.example/item/1", supplier_sku: `SUP-${color}`, created_at: now, updated_at: now,
+  });
+  state.product_variants.push(variant("0b5e3c3e-6f4a-4f63-9a3c-1f0d3a1e2b01", 0, "Black", 4900), variant("0b5e3c3e-6f4a-4f63-9a3c-1f0d3a1e2b02", 1, "White", 5400));
+  const rate = (id: string, position: number, name: string, amount: number, min: number, max: number): ShippingRate => ({
+    id, store_id: STORE_ID, profile_id: "profile-1", market: "US", name, amount, currency: "usd", min_days: min, max_days: max, position, active: true, created_at: now,
+  });
+  state.shipping_rates.push(rate("rate-free", 0, "Free tracked shipping", 0, 7, 12), rate("rate-express", 1, "Express", 995, 4, 6));
+  return { product, variants: state.product_variants, rates: state.shipping_rates };
 }

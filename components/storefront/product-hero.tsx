@@ -50,6 +50,8 @@ export function ProductHero(props: Props) {
   const [delivery, setDelivery] = useState("");
   const [barVisible, setBarVisible] = useState(false);
   const buyRef = useRef<HTMLDivElement>(null);
+  // One reservation per selection: retries reuse it, a new variant or quantity starts a new one.
+  const reservation = useRef<{ key: string; id: string } | null>(null);
 
   const variant = useMemo(
     () => variants.find((item) => options.every((option) => item.options[option.name] === selected[option.name])) ?? null,
@@ -115,12 +117,15 @@ export function ProductHero(props: Props) {
     if (!variant || pending) return;
     setPending(true);
     setError("");
+    const key = `${variant.id}:${quantity}`;
+    if (reservation.current?.key !== key) reservation.current = { key, id: crypto.randomUUID() };
     try {
       const response = await fetch("/api/checkout/physical", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ productId: props.productId, variantId: variant.id, quantity }),
+        body: JSON.stringify({ productId: props.productId, variantId: variant.id, quantity, checkoutId: reservation.current.id }),
       });
       const body = await response.json().catch(() => ({}));
+      if (response.status === 409) reservation.current = null;
       if (!response.ok || typeof body.url !== "string") throw new Error(body.error || "Checkout is unavailable right now. Please try again.");
       window.location.assign(body.url);
     } catch (cause) {

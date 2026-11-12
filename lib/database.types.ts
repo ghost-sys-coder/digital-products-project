@@ -1,4 +1,4 @@
-import type { CatalogProduct, Checkout, Store, DeliveryProduct } from "./catalog.types";
+import type { CatalogProduct, Checkout, Store, DeliveryProduct, PhysicalSnapshot, ShippingAddress } from "./catalog.types";
 import type { PaymentConnection, PaymentOAuthAttempt, ProductPaymentRef } from "./payment.types";
 // Mirrors the migrations. Keep these types with the schema.
 export type Order = {
@@ -8,10 +8,11 @@ export type Order = {
   email: string;
   amount_total: number | null;
   currency: string | null;
-  download_token_hash: string;
+  /** Null for physical orders, which have no download. */
+  download_token_hash: string | null;
   download_count: number;
   max_downloads: number;
-  token_expires_at: string;
+  token_expires_at: string | null;
   email_status: "pending" | "sent";
   email_sent_at: string | null;
   created_at: string;
@@ -20,7 +21,22 @@ export type Order = {
   store_id: string;
   product_snapshot: DeliveryProduct | null;
   payment_connection_id?: string | null;
+  // Physical orders (supabase/migrations/20261112140000_physical_products.sql).
+  kind?: "digital" | "physical";
+  customer_name?: string | null;
+  shipping_address?: ShippingAddress | null;
+  physical_snapshot?: PhysicalSnapshot | null;
+  fulfillment_status?: FulfillmentStatus | null;
+  supplier_order_ref?: string | null;
+  tracking_number?: string | null;
+  tracking_carrier?: string | null;
+  tracking_url?: string | null;
+  ordered_at?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
+  tracking_email_sent_at?: string | null;
 };
+export type FulfillmentStatus = "needs_ordering" | "ordered" | "shipped" | "delivered" | "cancelled";
 
 export type Database = {
   public: {

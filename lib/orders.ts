@@ -2,7 +2,7 @@ import "server-only";
 import { getSupabase } from "./supabase";
 import { MAX_DOWNLOADS } from "./tokens";
 import type { Order } from "./database.types";
-import type { DeliveryProduct } from "./catalog.types";
+import type { DeliveryProduct, PhysicalSnapshot, ShippingAddress } from "./catalog.types";
 import { STORE_ID } from "./store-config";
 export type { Order } from "./database.types";
 
@@ -41,6 +41,37 @@ export async function insertOrder(input: {
     if (order && order.store_id === (input.storeId ?? STORE_ID) && (order.payment_connection_id ?? null) === (input.connectionId ?? null)) return { order, inserted: false };
   }
   throw new Error("Could not insert order");
+}
+
+/** Records a paid physical order once; a replayed webhook returns the existing order. */
+export async function insertPhysicalOrder(input: {
+  sessionId: string; productId: string; email: string; amountTotal: number | null; currency: string | null;
+  customerName: string | null; shippingAddress: ShippingAddress; snapshot: PhysicalSnapshot;
+  storeId?: string; connectionId?: string | null;
+}): Promise<{ order: Order; inserted: boolean }> {
+  const storeId = input.storeId ?? STORE_ID;
+  const { data, error } = await getSupabase().from("orders").insert({
+    stripe_session_id: input.sessionId, store_id: storeId,
+    ...(input.connectionId ? { payment_connection_id: input.connectionId } : {}),
+    kind: "physical", product_id: input.productId, product_snapshot: null, email: input.email,
+    amount_total: input.amountTotal, currency: input.currency,
+    download_token_hash: null, token_expires_at: null,
+    customer_name: input.customerName, shipping_address: input.shippingAddress, physical_snapshot: input.snapshot,
+    fulfillment_status: "needs_ordering", email_status: "pending",
+  }).select("*").single();
+  if (!error && data) return { order: data as Order, inserted: true };
+  if (error?.code === "23505") {
+    const order = await findOrder(input.sessionId);
+    if (order && order.kind === "physical" && order.store_id === storeId && (order.payment_connection_id ?? null) === (input.connectionId ?? null)) return { order, inserted: false };
+  }
+  throw new Error("Could not insert order");
+}
+
+/** Marks a physical order's confirmation email as sent; only moves pending to sent. */
+export async function markConfirmationSent(orderId: string) {
+  const { error } = await getSupabase().from("orders").update({ email_status: "sent", email_sent_at: new Date().toISOString() })
+    .eq("id", orderId).eq("kind", "physical").eq("email_status", "pending");
+  if (error) throw new Error("Could not record confirmation email");
 }
 
 export async function claimDelivery(sessionId: string, lockId: string, force: boolean) {
