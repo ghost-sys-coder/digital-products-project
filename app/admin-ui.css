@@ -46,7 +46,8 @@
 .signout-dialog-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--blue-wash); color: var(--accent); }
 .signout-dialog [data-slot="alert-dialog-header"] { display: grid; place-items: start; text-align: left; gap: 12px; }
 .signout-dialog [data-slot="alert-dialog-title"] { margin: 0; font-size: 21px; font-weight: 600; line-height: 1.3; letter-spacing: -.035em; }
-.signout-dialog [data-slot="alert-dialog-description"] { margin: 0; font-size: 13px; line-height: 1.8; text-wrap: pretty; }
+.signout-dialog [data-slot="alert-dialog-description"] { margin: 0; font-size: 13px; line-height: 1.8; }
+@supports (text-wrap: pretty) { .signout-dialog [data-slot="alert-dialog-description"] { text-wrap: pretty; } }
 .signout-dialog [data-slot="alert-dialog-footer"] { display: flex; flex-direction: row; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin: 4px 0 0; padding: 20px 0 0; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
 .signout-dialog .button { min-height: 42px; border-style: solid; font-size: 12px; }
 @media (max-width: 600px) {
