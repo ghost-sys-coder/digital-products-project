@@ -72,7 +72,7 @@ class Query implements PromiseLike<Result> {
     if (this.operation === "insert") {
       if (state.insertError) return { data: null, error: state.insertError };
       if (tableRows.some((row) => (this.values.id !== undefined && row.id === this.values.id) ||
-        (this.table === "orders" && (row.stripe_session_id === this.values.stripe_session_id || row.download_token_hash === this.values.download_token_hash)) ||
+        (this.table === "orders" && (row.stripe_session_id === this.values.stripe_session_id || (this.values.download_token_hash != null && row.download_token_hash === this.values.download_token_hash))) ||
         (this.table === "products" && row.store_id === this.values.store_id && row.slug === this.values.slug))) {
         return { data: null, error: { code: "23505", message: "Unique violation" } };
       }
@@ -220,4 +220,21 @@ export function seedPhysicalStore(overrides: Partial<CatalogProduct> = {}) {
   });
   state.shipping_rates.push(rate("rate-free", 0, "Free tracked shipping", 0, 7, 12), rate("rate-express", 1, "Express", 995, 4, 6));
   return { product, variants: state.product_variants, rates: state.shipping_rates };
+}
+
+/** A paid physical order as the webhook records it. */
+export function seedPhysicalOrder(overrides: Partial<Order> = {}) {
+  return seedOrder({
+    stripe_session_id: `cs_test_physical_${state.orders.length}`, product_id: "glow-lamp", kind: "physical",
+    download_token_hash: null, token_expires_at: null, email_status: "sent", amount_total: 10795, currency: "usd",
+    customer_name: "Ada Lovelace", fulfillment_status: "needs_ordering", supplier_order_ref: null,
+    tracking_number: null, tracking_carrier: null, tracking_url: null, ordered_at: null, shipped_at: null, delivered_at: null, tracking_email_sent_at: null,
+    shipping_address: { name: "Ada Lovelace", line1: "1 Main St", line2: null, city: "Austin", state: "TX", postal_code: "73301", country: "US", phone: "+15555550100" },
+    physical_snapshot: {
+      brand: { name: "Lumora Co.", supportEmail: "help@lumora.example" }, currency: "usd",
+      items: [{ productId: "glow-lamp", variantId: "v1", name: "Glow Lamp", variantLabel: "Black", sku: "GLW-Black", unitAmount: 4900, quantity: 2, imagePath: null, supplierUrl: "https://supplier.example/item/1", supplierSku: "SUP-Black" }],
+      shippingOptions: [], shipping: { name: "Express", amount: 995, minDays: 4, maxDays: 6 },
+    },
+    ...overrides,
+  });
 }

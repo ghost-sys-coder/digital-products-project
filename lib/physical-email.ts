@@ -73,6 +73,76 @@ ${brand}`;
   return { subject, html, text };
 }
 
+/** A universal tracking page when the carrier gave no link; 17TRACK covers most AliExpress carriers. */
+export function trackingLink(trackingNumber: string, trackingUrl: string | null | undefined) {
+  return trackingUrl || `https://t.17track.net/en#nums=${encodeURIComponent(trackingNumber)}`;
+}
+
+export function buildTrackingEmail(order: Order) {
+  const snapshot = order.physical_snapshot;
+  if (!snapshot || !order.tracking_number) throw new Error("Order has no tracking to send");
+  const brand = snapshot.brand.name;
+  const firstName = (order.customer_name ?? order.shipping_address?.name ?? "").trim().split(/\s+/)[0] ?? "";
+  const link = trackingLink(order.tracking_number, order.tracking_url);
+  const items = snapshot.items.map((item) => `${item.quantity} × ${item.variantLabel ? `${item.name} (${item.variantLabel})` : item.name}`);
+  const carrier = order.tracking_carrier ? `${order.tracking_carrier} · ` : "";
+  const estimate = snapshot.shipping && snapshot.shipping.maxDays
+    ? `Most orders arrive within ${snapshot.shipping.minDays}–${snapshot.shipping.maxDays} business days of ordering. Tracking can take a day or two to show the first update.`
+    : "Tracking can take a day or two to show the first update.";
+  const reference = order.stripe_session_id.slice(-8).toUpperCase();
+  const subject = `${brand}: your order has shipped`;
+  const html = `<div style="font-family:system-ui,-apple-system,sans-serif;color:#171717;line-height:1.6;max-width:560px">
+<p style="font-size:20px;font-weight:600;margin:0 0 8px">${escapeHtml(firstName ? `Good news, ${firstName}!` : "Good news!")}</p>
+<p>Your ${escapeHtml(brand)} order is on its way.</p>
+<p style="margin:0;color:#333">${items.map(escapeHtml).join("<br>")}</p>
+<p style="margin:20px 0 6px;color:#555">${escapeHtml(`${carrier}Tracking number ${order.tracking_number}`)}</p>
+<p style="margin:0 0 20px"><a href="${escapeHtml(link)}" style="display:inline-block;padding:12px 20px;border-radius:8px;background:#171717;color:#fff;text-decoration:none;font-weight:600">Track your order</a></p>
+<p style="color:#555">${escapeHtml(estimate)}</p>
+<p>Questions about your delivery? Just reply to this email.</p>
+<p style="color:#777;font-size:13px">Order reference ${escapeHtml(reference)}</p>
+<p>${escapeHtml(brand)}</p>
+</div>`;
+  const text = `${firstName ? `Good news, ${firstName}!` : "Good news!"}
+
+Your ${brand} order is on its way.
+
+${items.join("\n")}
+
+${carrier}Tracking number ${order.tracking_number}
+Track your order: ${link}
+
+${estimate}
+
+Questions about your delivery? Just reply to this email.
+
+Order reference ${reference}
+${brand}`;
+  return { subject, html, text };
+}
+
+export async function sendTrackingEmail(order: Order, { resend = false } = {}) {
+  const env = getEnv();
+  const deployment = getDeployment();
+  if (!deployment.production && !emailAllowed(order.email, deployment.emailAllowlist)) {
+    console.warn("Non-production email blocked: recipient is not on EMAIL_ALLOWLIST", { sessionId: order.stripe_session_id });
+    throw new Error("Recipient is not allowed outside production");
+  }
+  const message = buildTrackingEmail(order);
+  const brand = order.physical_snapshot!.brand;
+  const { data, error } = await new Resend(env.RESEND_API_KEY).emails.send({
+    from: `${senderName(brand.name)} <orders@mail.veilcode.studio>`,
+    replyTo: brand.supportEmail ?? FALLBACK_REPLY_TO,
+    to: order.email,
+    ...message,
+    subject: deployment.production ? message.subject : `[${deployment.env === "preview" ? "Preview" : "Dev"}] ${message.subject}`,
+  }, {
+    // One email per tracking number; an explicit resend from the owner always sends.
+    idempotencyKey: resend ? `tracking-${order.stripe_session_id}-${Date.now()}` : `tracking-${order.stripe_session_id}-${order.tracking_number}`,
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (error || !data) throw new Error("Tracking email was not accepted by Resend");
+}
+
 export async function sendOrderConfirmation(order: Order) {
   const env = getEnv();
   const deployment = getDeployment();

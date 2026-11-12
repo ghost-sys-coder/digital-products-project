@@ -90,14 +90,15 @@ Each phase is built and tested on **staging** first, using the preview Supabase 
 
 The goal is a premium store that can take a real US order and get it to the customer.
 
-- Physical product type, variants, and shipping profiles (markets with rates and delivery estimates).
-- Section-based store page with the section library above and two theme presets.
-- A public media bucket for store images and video. Paid digital downloads stay in the private bucket.
-- Checkout with variant, quantity, shipping address (US), and shipping options. The checkout reservation keeps a copy of exactly what was bought.
-- Webhook fulfilment for physical orders: an order confirmation email instead of a download link, and the order created as **Needs ordering**.
-- Fulfilment queue in admin, and tracking emails.
-- Policy pages and the publish checks above.
-- **TikTok pixel and server-side purchase events**, so TikTok ads can optimise for sales. US traffic first, so no cookie banner yet.
+- [x] Physical product type, variants, and shipping profiles (markets with rates and delivery estimates).
+- [x] Section-based store page with the section library above and all four theme presets.
+- [x] A public media bucket for store images and video. Paid digital downloads stay in the private bucket.
+- [x] Checkout with variant, quantity, shipping address (US), and shipping options. The checkout reservation keeps a copy of exactly what was bought.
+- [x] Webhook fulfilment for physical orders: an order confirmation email instead of a download link, and the order created as **Needs ordering**.
+- [x] Fulfilment queue in admin, and tracking emails.
+- [ ] Policy pages and the publish checks above.
+- [ ] Admin editor for physical products: variants, brand, theme, page sections, media uploads, shipping profiles.
+- [ ] **TikTok pixel and server-side purchase events**, so TikTok ads can optimise for sales. US traffic first, so no cookie banner yet.
 
 ### Phase 2: Trust and growth
 

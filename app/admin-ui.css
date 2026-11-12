@@ -56,3 +56,58 @@
 }
 @media (max-width: 360px) { .admin-topbar > span { font-size: 10px; } .admin-topbar-actions { gap: 7px; } }
 @media (prefers-reduced-motion: reduce) { [data-slot="dropdown-menu-content"], [data-slot="alert-dialog-content"], [data-slot="alert-dialog-overlay"] { animation: none !important; } }
+
+/* Fulfilment */
+.fulfil-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: -10px 0 22px; }
+.fulfil-tabs a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: white; color: var(--muted); font-size: 12px; text-decoration: none; }
+.fulfil-tabs a span { min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--surface); font-size: 10px; text-align: center; font-variant-numeric: tabular-nums; }
+.fulfil-tabs a.active { border-color: var(--accent); background: var(--blue-wash); color: var(--foreground); }
+.fulfil-tabs a.active span { background: white; color: var(--accent); }
+.fulfil-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.fulfil-card-head h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+.fulfil-card-head p { margin: 0; }
+.fulfil-card-meta { display: flex; align-items: center; gap: 12px; font-size: 15px; white-space: nowrap; }
+.badge.warning { color: #8a4b00; background: #fff4e0; }
+.fulfil-card-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); }
+.fulfil-card-body > section { padding: 20px 24px; min-width: 0; }
+.fulfil-card-body > section + section { border-left: 1px solid var(--line); }
+.fulfil-card-body h3 { margin: 0 0 12px; color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.fulfil-item { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.fulfil-thumb { position: relative; flex: none; width: 56px; height: 56px; overflow: hidden; border-radius: 8px; background: var(--surface); }
+.fulfil-thumb img { object-fit: cover; }
+.fulfil-item strong { display: block; font-size: 13px; font-weight: 600; }
+.fulfil-item > div > span { display: block; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.fulfil-supplier { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; font-weight: 550; }
+.fulfil-missing { margin-top: 6px; color: #a62434 !important; }
+.fulfil-shipping { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.copy-list { display: grid; gap: 4px; }
+.copy-field { display: grid; grid-template-columns: 86px minmax(0, 1fr) 16px; align-items: start; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; color: var(--foreground); font-size: 12px; text-align: left; cursor: pointer; }
+.copy-field:hover { background: var(--surface); }
+.copy-field svg { margin-top: 2px; color: var(--muted); }
+.copy-field-label { color: var(--muted); font-size: 11px; }
+.copy-field-value { overflow-wrap: anywhere; white-space: pre-line; }
+.copy-field:last-child { margin-top: 4px; border: 1px dashed var(--line); }
+.fulfil-actions { display: grid; gap: 12px; }
+.fulfil-form { display: grid; gap: 10px; }
+.fulfil-form label { margin: 0; font-size: 11px; }
+.fulfil-form input:not([type="checkbox"]) { width: 100%; margin-top: 4px; }
+.fulfil-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fulfil-form .field-help { margin: -4px 0 0; }
+.fulfil-check { display: flex !important; align-items: center; gap: 8px; font-weight: 400 !important; }
+.fulfil-form .button, .fulfil-row .button { justify-self: start; }
+.fulfil-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.fulfil-actions .text-button { padding: 0; border: 0; background: none; color: var(--accent); font-size: 12px; cursor: pointer; }
+.fulfil-cancel { color: #a62434; }
+.fulfil-details summary { color: var(--accent); font-size: 12px; cursor: pointer; margin-bottom: 10px; }
+.fulfil-actions .form-error, .fulfil-actions .save-success { margin: 0; }
+@media (max-width: 1100px) {
+  .fulfil-card-body { grid-template-columns: 1fr 1fr; }
+  .fulfil-card-body > section:last-child { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 700px) {
+  .fulfil-card-body { grid-template-columns: 1fr; }
+  .fulfil-card-body > section + section { border-left: 0; border-top: 1px solid var(--line); }
+  .fulfil-card-head { flex-direction: column; }
+  .fulfil-fields { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) { .admin-sidebar nav { grid-template-columns: repeat(5, 1fr) !important; } }
