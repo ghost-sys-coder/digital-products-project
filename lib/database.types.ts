@@ -1,5 +1,6 @@
 import type { CatalogProduct, Checkout, Store, DeliveryProduct, PhysicalSnapshot, ShippingAddress } from "./catalog.types";
 import type { PaymentConnection, PaymentOAuthAttempt, ProductPaymentRef } from "./payment.types";
+import type { RateInput, VariantInput } from "./store-input";
 // Mirrors the migrations. Keep these types with the schema.
 export type Order = {
   id: string;
@@ -67,6 +68,15 @@ export type Database = {
       claim_delivery: {
         Args: { p_session_id: string; p_lock_id: string; p_force?: boolean };
         Returns: Order[];
+      };
+      // supabase/migrations/20261113090000_store_editor.sql
+      save_shipping_profile: {
+        Args: { p_store_id: string; p_profile_id: string; p_name: string; p_rates: RateInput[] };
+        Returns: string;
+      };
+      save_physical_store: {
+        Args: { p_store_id: string; p_product_id: string; p_revision: number; p_product: Record<string, unknown>; p_variants: VariantInput[] };
+        Returns: number;
       };
     };
     Enums: Record<string, never>;

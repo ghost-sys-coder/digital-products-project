@@ -8,9 +8,10 @@ import "../../storefront.css";
 
 export const dynamic = "force-dynamic";
 
-type Params = { params: Promise<{ slug: string; policy: string }> };
+type Params = { params: Promise<{ slug: string; policy: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> };
 
-const loadStore = cache((slug: string) => getStorefront(slug));
+// The owner can read a draft store's policies with ?preview=1, like the store page itself.
+const loadStore = cache((slug: string, preview: boolean) => getStorefront(slug, { preview }));
 
 function documentFor(store: Storefront, kind: PolicyKind) {
   return buildPolicy(kind, {
@@ -18,25 +19,28 @@ function documentFor(store: Storefront, kind: PolicyKind) {
     currency: store.product.currency, rates: store.shipping, policies: store.policies!,
   });
 }
-async function load(params: Params["params"]) {
-  const { slug, policy } = await params;
+async function load({ params, searchParams }: Params) {
+  const [{ slug, policy }, query] = await Promise.all([params, searchParams]);
   if (!(POLICY_KINDS as readonly string[]).includes(policy)) return null;
-  const store = await loadStore(slug);
+  const store = await loadStore(slug, query.preview === "1");
   if (!store?.policies) return null;
   return { store, kind: policy as PolicyKind };
 }
 
-export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const found = await load(params);
+export async function generateMetadata(props: Params): Promise<Metadata> {
+  const found = await load(props);
   if (!found) return { title: "Page not found" };
   const doc = documentFor(found.store, found.kind);
-  return { title: { absolute: `${doc.title} | ${found.store.brand.name}` }, description: doc.intro };
+  return {
+    title: { absolute: `${doc.title} | ${found.store.brand.name}` }, description: doc.intro,
+    ...(found.store.product.draft ? { robots: { index: false, follow: false } } : {}),
+  };
 }
 
 const dateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" });
 
-export default async function PolicyPage({ params }: Params) {
-  const found = await load(params);
+export default async function PolicyPage(props: Params) {
+  const found = await load(props);
   if (!found) notFound();
   const { store, kind } = found;
   const doc = documentFor(store, kind);
@@ -63,7 +67,7 @@ export default async function PolicyPage({ params }: Params) {
             </section>
           ))}
           <nav className="st-policy-nav" aria-label="Other policies">
-            {POLICY_KINDS.filter((other) => other !== kind).map((other) => <a key={other} href={`/s/${store.product.slug}/policies/${other}`}>{POLICY_TITLES[other]}</a>)}
+            {POLICY_KINDS.filter((other) => other !== kind).map((other) => <a key={other} href={`/s/${store.product.slug}/policies/${other}${store.product.draft ? "?preview=1" : ""}`}>{POLICY_TITLES[other]}</a>)}
           </nav>
         </article>
       </main>

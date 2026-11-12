@@ -7,7 +7,7 @@ import { STORE_ID } from "./store-config";
 import { getCatalogProduct } from "./catalog";
 import { bindCheckoutSession, findCheckout } from "./checkout";
 import { paymentContext, stripeOptions } from "./payment-connections";
-import { parseBrand } from "./store-themes";
+import { parseBrand, statementSuffix } from "./store-themes";
 import { parseStorePage, storePageReadiness } from "./store-page";
 import { storeReadinessProblems } from "./store-policies";
 import { publicOptions, storefrontMediaBase, variantLabel } from "./storefront";
@@ -23,11 +23,7 @@ const MAX_SHIPPING_OPTIONS = 5;
 
 export type PhysicalCheckoutRequest = { productId: string; variantId: string; quantity: number; checkoutId: string };
 
-/** Card statements show the account prefix plus this suffix; keep it short and plain. */
-export function statementSuffix(brandName: string) {
-  const clean = brandName.toUpperCase().replace(/[^A-Z0-9 ]/g, "").replace(/\s+/g, " ").trim().slice(0, 10).trim();
-  return /[A-Z]/.test(clean) ? clean : null;
-}
+export { statementSuffix };
 
 async function loadVariant(productId: string, variantId: string) {
   const { data, error } = await getSupabase().from("product_variants").select("*")

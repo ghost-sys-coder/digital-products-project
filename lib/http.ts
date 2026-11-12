@@ -16,10 +16,14 @@ export function apiError(error: unknown) {
     headers: { "Cache-Control": "no-store" },
   });
 }
-export async function jsonObject(req: Request): Promise<Record<string, unknown>> {
-  if (Number(req.headers.get("content-length")) > 16000) throw new HttpError(413, "Request is too large.");
+export async function jsonObject(req: Request, maxBytes = 16000): Promise<Record<string, unknown>> {
+  if (Number(req.headers.get("content-length")) > maxBytes) throw new HttpError(413, "Request is too large.");
+  let text: string;
+  try { text = await req.text(); } catch { throw new HttpError(400, "Provide a valid JSON object."); }
+  // Content-Length can be absent; check what actually arrived too.
+  if (new TextEncoder().encode(text).length > maxBytes) throw new HttpError(413, "Request is too large.");
   try {
-    const body: unknown = await req.json();
+    const body: unknown = JSON.parse(text);
     if (body && typeof body === "object" && !Array.isArray(body)) return body as Record<string, unknown>;
   } catch { /* handled below */ }
   throw new HttpError(400, "Provide a valid JSON object.");

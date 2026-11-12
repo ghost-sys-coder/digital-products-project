@@ -44,7 +44,21 @@ export default async function StorePage(props: Params) {
   const { store, query } = await load(props);
   if (!store) notFound();
   const hero = heroOf(store);
-  if (!hero || !store.variants.length) notFound();
+  if (!hero || !store.variants.length) {
+    if (!store.product.draft) notFound();
+    // The owner's preview of an unfinished draft says what's missing instead of a not-found page.
+    return (
+      <StoreFrame store={store}>
+        <main className="st-section st-thanks">
+          <div className="st-shell narrow">
+            <p className="st-eyebrow">Draft preview</p>
+            <h1 className="st-display">Almost there.</h1>
+            <p className="st-lede">{!hero ? "Add the Hero and buy box section" : "Add at least one variant for sale with a price"}, then save to see your store here.</p>
+          </div>
+        </main>
+      </StoreFrame>
+    );
+  }
 
   const sections = store.page.sections.filter((section) => section.enabled);
   const announcement = sections.find((section) => section.type === "announcement");

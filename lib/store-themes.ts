@@ -59,6 +59,18 @@ export function parseBrand(value: unknown, storeId: string, productId: string): 
   return { name, logoPath, accent, supportEmail };
 }
 
+/** Card statements show the account prefix plus this suffix; keep it short and plain. */
+export function statementSuffix(brandName: string) {
+  const clean = brandName.toUpperCase().replace(/[^A-Z0-9 ]/g, "").replace(/\s+/g, " ").trim().slice(0, 10).trim();
+  return /[A-Z]/.test(clean) ? clean : null;
+}
+
+/** WCAG contrast ratio between two #rrggbb colours (1 to 21). */
+export function contrastRatio(a: string, b: string) {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
+}
+
 function luminance(hex: string) {
   const channel = (offset: number) => {
     const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;

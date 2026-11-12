@@ -98,7 +98,7 @@ The goal is a premium store that can take a real US order and get it to the cust
 - [x] Fulfilment queue in admin, and tracking emails.
 - [x] Policy pages and the publish checks above. Generated from per-store settings plus live shipping rates (`lib/store-policies.ts`); checkout refuses an incomplete store and the database refuses to publish one without policies.
 - [x] Videos (with posters and sound toggle) and GIFs across store sections.
-- [ ] Admin editor for physical products: variants, brand, theme, page sections, media uploads, shipping profiles.
+- [x] Admin editor for physical products (`components/store-editor`, `lib/manage-stores.ts`): options and variants with private supplier links, brand and theme, the section builder, a media library (direct uploads, content checks, automatic video posters), shared shipping profiles, policy settings, a publish checklist, and a live phone preview. A save writes the product and its variants (or a profile and its rates) in one transaction (`save_physical_store`, `save_shipping_profile`).
 - [ ] **TikTok pixel and server-side purchase events**, so TikTok ads can optimise for sales. US traffic first, so no cookie banner yet.
 
 ### Phase 2: Trust and growth

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { vi } from "vitest";
 import type { Order } from "../lib/orders";
-import type { CatalogProduct, Checkout, ProductVariant, ShippingRate, Store } from "../lib/catalog.types";
+import type { CatalogProduct, Checkout, ProductVariant, ShippingProfile, ShippingRate, Store } from "../lib/catalog.types";
 import { STORE_ID } from "../lib/store-config";
 import type { PaymentConnection, PaymentOAuthAttempt, ProductPaymentRef } from "../lib/payment.types";
 
@@ -12,7 +12,7 @@ export const OWNER_ID = "975ac870-5ab8-43a5-9d70-c051c42fc61f";
 export const state = {
   orders: [] as Order[], products: [] as CatalogProduct[], checkouts: [] as Checkout[], stores: [] as Store[],
   payment_connections: [] as PaymentConnection[], payment_oauth_attempts: [] as PaymentOAuthAttempt[], product_payment_refs: [] as ProductPaymentRef[],
-  product_variants: [] as ProductVariant[], shipping_rates: [] as ShippingRate[],
+  product_variants: [] as ProductVariant[], shipping_rates: [] as ShippingRate[], shipping_profiles: [] as ShippingProfile[],
   dbError: false, insertError: null as DbError, markSentError: false,
   stripeProducts: new Map<string, Row>(), stripePrices: new Map<string, Row>(), sessions: new Map<string, Row>(), stripeShippingRates: new Map<string, Row>(),
 };
@@ -42,7 +42,7 @@ export function seedProduct(overrides: Partial<CatalogProduct> = {}): CatalogPro
   return product;
 }
 function rows(table: string): Row[] {
-  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs", "product_variants", "shipping_rates"].includes(table)) throw new Error(`Unexpected table: ${table}`);
+  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs", "product_variants", "shipping_rates", "shipping_profiles"].includes(table)) throw new Error(`Unexpected table: ${table}`);
   return state[table as "orders"] as unknown as Row[];
 }
 class Query implements PromiseLike<Result> {
@@ -106,6 +106,8 @@ export const storageDownload = vi.fn();
 export const storageExists = vi.fn();
 export const signedUpload = vi.fn();
 export const storageInfo = vi.fn();
+export const storageList = vi.fn();
+export const storageRemove = vi.fn();
 export const rpc = vi.fn(async (name: string, args: Row) => {
   if (state.dbError) return { data: null, error: { code: "08000" } };
   if (name === "activate_payment_connection") {
@@ -131,6 +133,31 @@ export const rpc = vi.fn(async (name: string, args: Row) => {
     order.delivery_locked_until = new Date(Date.now() + 300_000).toISOString();
     return { data: [{ ...order }], error: null };
   }
+  if (name === "save_shipping_profile") {
+    // Mirrors supabase/migrations/20261113090000_store_editor.sql.
+    let profile = state.shipping_profiles.find((entry) => entry.id === args.p_profile_id);
+    if (profile && profile.store_id !== args.p_store_id) return { data: null, error: { code: "42501" } };
+    const rates = args.p_rates as Row[];
+    if (rates.some((rate) => state.shipping_rates.some((existing) => existing.id === rate.id && existing.profile_id !== args.p_profile_id))) return { data: null, error: { code: "42501" } };
+    if (!profile) state.shipping_profiles.push(profile = { id: args.p_profile_id as string, store_id: args.p_store_id as string, name: "", created_at: new Date().toISOString() });
+    profile.name = args.p_name as string;
+    state.shipping_rates = [...state.shipping_rates.filter((rate) => rate.profile_id !== profile!.id),
+      ...rates.map((rate, position) => ({ ...rate, store_id: profile!.store_id, profile_id: profile!.id, position, created_at: new Date().toISOString() }) as ShippingRate)];
+    return { data: profile.id, error: null };
+  }
+  if (name === "save_physical_store") {
+    const product = state.products.find((entry) => entry.id === args.p_product_id && entry.store_id === args.p_store_id && entry.kind === "physical");
+    if (!product || product.revision !== args.p_revision) return { data: null, error: { code: "PT409" } };
+    const fields = args.p_product as Row;
+    if (state.products.some((entry) => entry !== product && entry.store_id === product.store_id && entry.slug === fields.slug)) return { data: null, error: { code: "23505" } };
+    const variants = args.p_variants as Row[];
+    if (variants.some((variant) => state.product_variants.some((existing) => existing.id === variant.id && existing.product_id !== product.id))) return { data: null, error: { code: "42501" } };
+    Object.assign(product, fields, { revision: product.revision + 1, updated_at: new Date().toISOString() });
+    const now = new Date().toISOString();
+    state.product_variants = [...state.product_variants.filter((variant) => variant.product_id !== product.id),
+      ...variants.map((variant, position) => ({ ...variant, store_id: product.store_id, product_id: product.id, position, created_at: now, updated_at: now }) as ProductVariant)];
+    return { data: product.revision, error: null };
+  }
   throw new Error(`Unexpected RPC: ${name}`);
 });
 export const getUser = vi.fn();
@@ -138,7 +165,7 @@ export const signIn = vi.fn();
 export const signOut = vi.fn();
 export const supabase = {
   from: vi.fn((table: string) => new Query(table)), rpc,
-  storage: { from: vi.fn(() => ({ createSignedUrl: signUrl, createSignedUploadUrl: signedUpload, info: storageInfo, upload, download: storageDownload, exists: storageExists })) },
+  storage: { from: vi.fn(() => ({ createSignedUrl: signUrl, createSignedUploadUrl: signedUpload, info: storageInfo, upload, download: storageDownload, exists: storageExists, list: storageList, remove: storageRemove })) },
   auth: { getUser, signInWithPassword: signIn, signOut },
 };
 export const sendEmail = vi.fn();
@@ -158,7 +185,7 @@ export const oauthAuthorizeUrl = vi.fn();
 export function resetFakes() {
   state.orders = []; state.products = []; state.checkouts = [];
   state.payment_connections = []; state.payment_oauth_attempts = []; state.product_payment_refs = [];
-  state.product_variants = []; state.shipping_rates = [];
+  state.product_variants = []; state.shipping_rates = []; state.shipping_profiles = [];
   shippingRatesRetrieve.mockReset().mockImplementation(async (id: string) => { const rate = state.stripeShippingRates.get(id); if (!rate) throw { code: "resource_missing" }; return { ...rate }; });
   state.stripeShippingRates.clear();
   state.stores = [{ id: STORE_ID, owner_user_id: OWNER_ID, name: "VeilCode Studio", tagline: "Good systems. Better work.", bio: "Practical studio tools.", support_email: "support@veilcode.studio", website_url: "https://veilcode.studio" }];
@@ -171,6 +198,8 @@ export function resetFakes() {
   storageExists.mockReset().mockResolvedValue({ data: true, error: null });
   signedUpload.mockReset().mockImplementation(async (path: string) => ({ data: { path, signedUrl: "https://example.supabase.co/storage/v1/object/upload/sign/example?token=fixture", token: "fixture" }, error: null }));
   storageInfo.mockReset().mockResolvedValue({ data: { size: 5, contentType: "application/pdf" }, error: null });
+  storageList.mockReset().mockResolvedValue({ data: [], error: null });
+  storageRemove.mockReset().mockResolvedValue({ data: [], error: null });
   constructEvent.mockReset().mockImplementation((body: string) => JSON.parse(body));
   const scoped = (id: string, options?: { stripeAccount?: string }) => options?.stripeAccount ? `${options.stripeAccount}:${id}` : id;
   productsRetrieve.mockReset().mockImplementation(async (id: string, _params?: unknown, options?: { stripeAccount?: string }) => { const product = state.stripeProducts.get(scoped(id, options)); if (!product) throw { code: "resource_missing" }; return { ...product }; });
