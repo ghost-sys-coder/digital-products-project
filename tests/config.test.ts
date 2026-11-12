@@ -3,6 +3,7 @@ import { getEnv } from "../lib/env";
 import { hashToken, issueToken } from "../lib/tokens";
 import { buildDeliveryEmail } from "../lib/email";
 import { PRODUCTS } from "../lib/products";
+import { stubDevelopment } from "./env";
 
 describe("configuration and token safety", () => {
   it("names each missing required variable", () => {
@@ -19,7 +20,7 @@ describe("configuration and token safety", () => {
     expect(() => getEnv()).toThrow("APP_URL");
     vi.stubEnv("APP_URL", "https://example.com/subpath");
     expect(() => getEnv()).toThrow("APP_URL");
-    vi.stubEnv("APP_URL", "http://localhost:3000");
+    stubDevelopment();
     expect(getEnv().APP_URL).toBe("http://localhost:3000");
     vi.stubEnv("SUPABASE_URL", "not a URL");
     expect(() => getEnv()).toThrow("SUPABASE_URL");
@@ -41,6 +42,7 @@ describe("configuration and token safety", () => {
       expect(() => buildDeliveryEmail(PRODUCTS["lead-to-kickoff"], "test-token")).toThrow("APP_URL");
     }
     vi.stubEnv("APP_URL", "https://pod.veilcode.studio");
+    vi.stubEnv("PRODUCTION_APP_URL", "https://pod.veilcode.studio");
     expect(buildDeliveryEmail(PRODUCTS["lead-to-kickoff"], "test-token").text)
       .toContain("https://pod.veilcode.studio/api/download?token=test-token");
   });

@@ -12,9 +12,10 @@ export function getOwnerId() {
   return id;
 }
 // Auth clients are request-scoped: signing in must never mutate a shared session.
+// Password sign-in and token verification need only the public key, never a data key.
 export function authClient() {
   const env = getEnv();
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient(env.SUPABASE_URL, env.SUPABASE_PUBLISHABLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
 }

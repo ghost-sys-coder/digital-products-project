@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "stripe:listen": "node scripts/stripe-listen.mjs",
-    "orders:recover": "node scripts/recover-paid-orders.mjs",
-    "build": "next build",
+    "stripe:listen": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/stripe-listen.mjs",
+    "orders:recover": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/recover-paid-orders.mjs",
+    "env:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-environment.mjs",    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",

@@ -16,7 +16,9 @@ The detailed current scope is in `docs/storefront-build.md`. The research roadma
 
 ## 1. Install and configure
 
-Use Node.js 22.12+ and npm:
+Use Node.js 22.18+ and npm (the scripts import TypeScript directly).
+
+> **Environments:** production, preview (staging) and local development are strictly separated, and the app refuses to start with mixed-up settings. Read [docs/environments.md](docs/environments.md) before changing any environment variable or Vercel setting.
 
 ```sh
 npm install
@@ -27,12 +29,17 @@ On PowerShell, use `Copy-Item .env.example .env.local` only if you do not alread
 
 | Variable | Value |
 | --- | --- |
+| `DEPLOYMENT_ENV` | `development` locally; `preview` / `production` in the matching Vercel scope |
 | `APP_URL` | `http://localhost:3000` locally; your HTTPS app origin on Vercel, with no path/query/fragment |
+| `PRODUCTION_APP_URL` | The live store origin, identical in every environment |
 | `STRIPE_SECRET_KEY` | Your account's Stripe test/sandbox secret or appropriately permissioned restricted key |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret for the local listener or deployed webhook endpoint |
 | `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only service role key |
+| `SUPABASE_PUBLISHABLE_KEY` | Public key for sign-in and the API gateway |
+| `PRODUCTION_SUPABASE_URL` | The production project URL, identical in every environment |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only service role key of this environment's project |
 | `SUPABASE_BUCKET` | Private bucket name, normally `products` |
+| `EMAIL_ALLOWLIST` | Required outside production: the only recipients allowed |
 | `RESEND_API_KEY` | Resend key permitted to send from the verified mail domain |
 | `OWNER_USER_ID` | The UUID of your permitted Supabase Auth user |
 

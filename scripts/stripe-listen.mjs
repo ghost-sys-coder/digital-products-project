@@ -4,11 +4,14 @@ import { readFile, writeFile } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkDeployment } from "../lib/deployment-rules.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const envPath = path.join(root, ".env.local");
 process.loadEnvFile(envPath);
 
+// Same separation rules as the app: local forwarding only ever feeds non-production data.
+if (checkDeployment(process.env).production) throw new Error("Local forwarding cannot run with production settings.");
 if (!/^(sk|rk)_test_/.test(process.env.STRIPE_SECRET_KEY ?? "")) {
   throw new Error("Local forwarding requires a Stripe sandbox/test key in .env.local.");
 }
