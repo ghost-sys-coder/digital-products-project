@@ -39,7 +39,11 @@ export const THEME_TOKENS: Record<ThemeId, ThemeTokens> = {
   },
 };
 
-export type Brand = { name: string; logoPath: string | null; accent: string | null; supportEmail: string | null };
+export type Brand = {
+  name: string; logoPath: string | null; accent: string | null; supportEmail: string | null;
+  /** TikTok pixel for ads measurement; see lib/tiktok.ts. */
+  tiktokPixelId: string | null;
+};
 
 export class BrandError extends Error {}
 
@@ -56,7 +60,21 @@ export function parseBrand(value: unknown, storeId: string, productId: string): 
   if (accent && !/^#[0-9a-f]{6}$/.test(accent)) throw new BrandError("Accent colour must be a hex colour like #7c5cff.");
   const supportEmail = typeof raw.supportEmail === "string" && raw.supportEmail.trim() ? raw.supportEmail.trim() : null;
   if (supportEmail && (supportEmail.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(supportEmail))) throw new BrandError("Enter a valid brand support email.");
-  return { name, logoPath, accent, supportEmail };
+  const tiktokPixelId = typeof raw.tiktokPixelId === "string" && raw.tiktokPixelId.trim() ? raw.tiktokPixelId.trim().toUpperCase() : null;
+  if (tiktokPixelId && !/^[A-Z0-9]{10,32}$/.test(tiktokPixelId)) throw new BrandError("The TikTok pixel ID is the code of letters and numbers shown in TikTok Events Manager, like C4ABCD1234EFGH5678IJ.");
+  return { name, logoPath, accent, supportEmail, tiktokPixelId };
+}
+
+/** Card statements show the account prefix plus this suffix; keep it short and plain. */
+export function statementSuffix(brandName: string) {
+  const clean = brandName.toUpperCase().replace(/[^A-Z0-9 ]/g, "").replace(/\s+/g, " ").trim().slice(0, 10).trim();
+  return /[A-Z]/.test(clean) ? clean : null;
+}
+
+/** WCAG contrast ratio between two #rrggbb colours (1 to 21). */
+export function contrastRatio(a: string, b: string) {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light + 0.05) / (dark + 0.05);
 }
 
 function luminance(hex: string) {

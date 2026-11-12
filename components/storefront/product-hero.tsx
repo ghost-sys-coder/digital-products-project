@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { trackTikTok } from "./tiktok";
 import { ChevronLeft, ChevronRight, Minus, Play, Plus, Truck } from "lucide-react";
 import { isAnimatedImage, type Media } from "@/lib/store-page";
 import type { PublicOption, PublicShipping, PublicVariant } from "@/lib/storefront";
@@ -120,6 +121,10 @@ export function ProductHero(props: Props) {
     setError("");
     const key = `${variant.id}:${quantity}`;
     if (reservation.current?.key !== key) reservation.current = { key, id: crypto.randomUUID() };
+    trackTikTok("InitiateCheckout", {
+      content_type: "product", currency: props.currency.toUpperCase(), value: (variant.price * quantity) / 100,
+      contents: [{ content_id: props.productId, content_name: props.name, quantity, price: variant.price / 100 }],
+    }, reservation.current.id);
     try {
       const response = await fetch("/api/checkout/physical", {
         method: "POST", headers: { "content-type": "application/json" },

@@ -5,6 +5,7 @@ import { getStorefront, type Storefront } from "@/lib/storefront";
 import { ProductHero } from "@/components/storefront/product-hero";
 import { StoreSection } from "@/components/storefront/sections";
 import { StoreFrame } from "@/components/storefront/store-frame";
+import { TikTokEvent } from "@/components/storefront/tiktok";
 import "./storefront.css";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,21 @@ export default async function StorePage(props: Params) {
   const { store, query } = await load(props);
   if (!store) notFound();
   const hero = heroOf(store);
-  if (!hero || !store.variants.length) notFound();
+  if (!hero || !store.variants.length) {
+    if (!store.product.draft) notFound();
+    // The owner's preview of an unfinished draft says what's missing instead of a not-found page.
+    return (
+      <StoreFrame store={store}>
+        <main className="st-section st-thanks">
+          <div className="st-shell narrow">
+            <p className="st-eyebrow">Draft preview</p>
+            <h1 className="st-display">Almost there.</h1>
+            <p className="st-lede">{!hero ? "Add the Hero and buy box section" : "Add at least one variant for sale with a price"}, then save to see your store here.</p>
+          </div>
+        </main>
+      </StoreFrame>
+    );
+  }
 
   const sections = store.page.sections.filter((section) => section.enabled);
   const announcement = sections.find((section) => section.type === "announcement");
@@ -62,6 +77,9 @@ export default async function StorePage(props: Params) {
 
   return (
     <StoreFrame store={store} nav={nav} announcement={announcement?.type === "announcement" ? announcement.data.text : undefined} onStorePage>
+      {store.brand.tiktokPixelId && <TikTokEvent event="ViewContent" params={{
+        content_type: "product", content_id: store.product.id, content_name: store.product.name, currency: store.product.currency.toUpperCase(), value: lowest / 100,
+      }} />}
       <main id="top">
         {query.checkout === "cancelled" && <p className="st-shell st-notice" role="status">Checkout was cancelled and you haven&apos;t been charged.</p>}
         {sections.map((section) => section.type === "hero"

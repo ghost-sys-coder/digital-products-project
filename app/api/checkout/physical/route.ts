@@ -1,5 +1,6 @@
 import { startPhysicalCheckout, MAX_QUANTITY } from "@/lib/physical-checkout";
 import { sameOrigin, apiError, HttpError, jsonObject } from "@/lib/http";
+import { attributionFrom } from "@/lib/tiktok";
 
 export const runtime = "nodejs";
 
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
         typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) {
       throw new HttpError(400, "Invalid checkout request.");
     }
-    const url = await startPhysicalCheckout({ productId, variantId, quantity, checkoutId });
+    const url = await startPhysicalCheckout({ productId, variantId, quantity, checkoutId, attribution: attributionFrom(req) });
     return Response.json({ url }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return apiError(error); }
 }

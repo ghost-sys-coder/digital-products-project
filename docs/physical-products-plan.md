@@ -98,8 +98,19 @@ The goal is a premium store that can take a real US order and get it to the cust
 - [x] Fulfilment queue in admin, and tracking emails.
 - [x] Policy pages and the publish checks above. Generated from per-store settings plus live shipping rates (`lib/store-policies.ts`); checkout refuses an incomplete store and the database refuses to publish one without policies.
 - [x] Videos (with posters and sound toggle) and GIFs across store sections.
-- [ ] Admin editor for physical products: variants, brand, theme, page sections, media uploads, shipping profiles.
-- [ ] **TikTok pixel and server-side purchase events**, so TikTok ads can optimise for sales. US traffic first, so no cookie banner yet.
+- [x] Admin editor for physical products (`components/store-editor`, `lib/manage-stores.ts`): options and variants with private supplier links, brand and theme, the section builder, a media library (direct uploads, content checks, automatic video posters), shared shipping profiles, policy settings, a publish checklist, and a live phone preview. A save writes the product and its variants (or a profile and its rates) in one transaction (`save_physical_store`, `save_shipping_profile`).
+- [x] **TikTok pixel and server-side purchase events**, so TikTok ads can optimise for sales (`lib/tiktok.ts`). Per-store pixel ID in the editor; purchases also go through the Events API when `TIKTOK_ACCESS_TOKENS` has the pixel's token, with the same event id as the pixel. US traffic first, so no cookie banner: Global Privacy Control and a “Your privacy choices” opt-out are honoured instead, and the privacy policy describes the sharing.
+- [x] **Delay notices and refunds** (`lib/order-delays.ts`): overdue orders are flagged; the owner emails a new ship-by date with a link to cancel for a full refund (the US Mail Order Rule's choice), and cancelling refunds in Stripe.
+
+## Releasing to production
+
+The app and the database must change together. Merging to `master` deploys production straight away, so:
+
+1. Apply every migration that `master` will need to the **production** Supabase project first (they are written to be safe for the code already running).
+2. Check production's storefront and admin still load.
+3. Then merge to `master`.
+
+Migrations apply to preview with `supabase db push` (the CLI is linked to preview). Production's migration history doesn't match the files (its earliest migrations were applied by hand), so apply production migrations one by one, not with `db push`.
 
 ### Phase 2: Trust and growth
 

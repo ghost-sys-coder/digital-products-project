@@ -66,7 +66,9 @@ describe("themes and brand", () => {
 
   it("validates brand settings", () => {
     expect(parseBrand({ name: " Nova Glow ", accent: "#7C5CFF", logoPath: `${prefix}brand/logo.png` }, STORE, PRODUCT))
-      .toEqual({ name: "Nova Glow", accent: "#7c5cff", logoPath: `${prefix}brand/logo.png`, supportEmail: null });
+      .toEqual({ name: "Nova Glow", accent: "#7c5cff", logoPath: `${prefix}brand/logo.png`, supportEmail: null, tiktokPixelId: null });
+    expect(parseBrand({ tiktokPixelId: " c4abcd1234efgh5678ij " }, STORE, PRODUCT).tiktokPixelId).toBe("C4ABCD1234EFGH5678IJ");
+    expect(() => parseBrand({ tiktokPixelId: "<script>" }, STORE, PRODUCT)).toThrow(BrandError);
     expect(() => parseBrand({ accent: "red" }, STORE, PRODUCT)).toThrow(BrandError);
     expect(() => parseBrand({ logoPath: "https://evil.example/logo.png" }, STORE, PRODUCT)).toThrow(BrandError);
     expect(() => parseBrand({ supportEmail: "nope" }, STORE, PRODUCT)).toThrow(BrandError);

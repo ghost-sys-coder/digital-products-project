@@ -83,6 +83,8 @@ export type PolicyContext = {
   brand: string; productName: string; supportEmail: string | null; currency: string;
   rates: { name: string; amount: number; minDays: number; maxDays: number }[];
   policies: StorePolicies;
+  /** The store measures its ads with a TikTok pixel (lib/tiktok.ts); the privacy policy says so. */
+  adTracking?: boolean;
 };
 export type PolicyDocument = { title: string; intro: string; sections: { heading: string; paragraphs: string[]; table?: string[][] }[]; updatedAt: string };
 
@@ -168,12 +170,23 @@ export function buildPolicy(kind: PolicyKind, ctx: PolicyContext): PolicyDocumen
         title: POLICY_TITLES.privacy,
         intro: `This policy explains what personal information ${brand} collects when you shop, and how we use it. ${seller}`,
         sections: [
-          { heading: "What we collect", paragraphs: ["When you order, we collect your name, email address, shipping address, phone number, and the details of what you bought. Card details are entered on Stripe's secure checkout and are never shared with us in full."] },
+          { heading: "What we collect", paragraphs: [
+            "When you order, we collect your name, email address, shipping address, phone number, and the details of what you bought. Card details are entered on Stripe's secure checkout and are never shared with us in full.",
+            ...(ctx.adTracking ? ["While you browse, the TikTok pixel on this store records the pages you view, the products you look at and buy, your IP address, and details of your device and browser."] : []),
+          ] },
           { heading: "How we use it", paragraphs: ["We use your information to process and deliver your order, send order confirmations and tracking updates, answer your questions, prevent fraud, and keep the records the law requires. We don't sell your personal information, and we don't send marketing emails unless you've asked for them."] },
-          { heading: "Who we share it with", paragraphs: ["We share only what each service needs: Stripe to process your payment; our fulfilment partners and carriers, who receive your name, shipping address, and phone number to deliver your order; and the providers that host this store and send its emails."] },
+          { heading: "Who we share it with", paragraphs: [
+            "We share only what each service needs: Stripe to process your payment; our fulfilment partners and carriers, who receive your name, shipping address, and phone number to deliver your order; and the providers that host this store and send its emails.",
+            ...(ctx.adTracking ? ["We also share details of your visit and purchase with TikTok, including your email address and phone number in hashed (scrambled) form, so we can measure how our TikTok ads perform and show them to people likely to be interested. Under some US state privacy laws this counts as “sharing” personal information for advertising. You can opt out at any time; see Your choices below."] : []),
+          ] },
           { heading: "How long we keep it", paragraphs: ["We keep order records for as long as we need them for delivery, returns, accounting, and legal obligations, typically up to seven years, and then delete them."] },
-          { heading: "Cookies", paragraphs: ["This store uses only the cookies needed for it to work. If that changes, for example to measure advertising, we'll update this policy first."] },
-          { heading: "Your choices", paragraphs: [`You can ask us what information we hold about you, or ask us to correct or delete it, by ${ctx.supportEmail ? `emailing ${ctx.supportEmail}` : "contacting us through this site"}. We'll reply ${p.responseTime}. This store is not intended for children under 13.`] },
+          { heading: "Cookies", paragraphs: [ctx.adTracking
+            ? "This store uses the cookies it needs to work, and the TikTok pixel's cookies to measure our ads. If you opt out, or your browser sends a Global Privacy Control signal, the TikTok pixel doesn't load."
+            : "This store uses only the cookies needed for it to work. If that changes, for example to measure advertising, we'll update this policy first."] },
+          { heading: "Your choices", paragraphs: [
+            `You can ask us what information we hold about you, or ask us to correct or delete it, by ${ctx.supportEmail ? `emailing ${ctx.supportEmail}` : "contacting us through this site"}. We'll reply ${p.responseTime}. This store is not intended for children under 13.`,
+            ...(ctx.adTracking ? ["To opt out of sharing for advertising, use “Your privacy choices” on this page or at the bottom of any page of the store. We also honour Global Privacy Control signals from your browser as an opt-out."] : []),
+          ] },
           ...extra,
         ],
       };

@@ -1,9 +1,11 @@
 import Image from "next/image";
+import Script from "next/script";
 import { Lock } from "lucide-react";
 import type { Storefront } from "@/lib/storefront";
 import { POLICY_KINDS, POLICY_TITLES } from "@/lib/store-policies";
 import { themeVariables, THEME_TOKENS } from "@/lib/store-themes";
 import { storeFontVariables } from "@/app/s/[slug]/fonts";
+import { pixelLoader } from "@/lib/tiktok-pixel";
 
 type NavItem = { href: string; label: string };
 
@@ -14,7 +16,10 @@ type NavItem = { href: string; label: string };
 export function StoreFrame({ store, children, nav = [], announcement, onStorePage = false }: {
   store: Storefront; children: React.ReactNode; nav?: NavItem[]; announcement?: string; onStorePage?: boolean;
 }) {
-  const home = `/s/${store.product.slug}`;
+  // A draft is only visible in the owner's preview; keep its links in preview too.
+  const query = store.product.draft ? "?preview=1" : "";
+  const home = `/s/${store.product.slug}${query}`;
+  const policyBase = `/s/${store.product.slug}/policies`;
   return (
     <div className={`st ${storeFontVariables}`} data-theme={store.theme} data-dark={THEME_TOKENS[store.theme].dark || undefined} style={themeVariables(store.theme, store.brand) as React.CSSProperties}>
       {store.product.draft && <p className="st-draft" role="note">Draft preview · only you can see this page</p>}
@@ -42,10 +47,13 @@ export function StoreFrame({ store, children, nav = [], announcement, onStorePag
         </div>
         {store.policies && (
           <nav className="st-shell st-footer-policies" aria-label="Store policies">
-            {POLICY_KINDS.map((kind) => <a key={kind} href={`${home}/policies/${kind}`}>{POLICY_TITLES[kind]}</a>)}
+            {POLICY_KINDS.map((kind) => <a key={kind} href={`${policyBase}/${kind}${query}`}>{POLICY_TITLES[kind]}</a>)}
+            {store.brand.tiktokPixelId && <a href={`${policyBase}/privacy${query}#choices`}>Your privacy choices</a>}
           </nav>
         )}
       </footer>
+      {/* Ads measurement, when the store has a pixel and the shopper hasn't opted out (checked in the loader). */}
+      {store.brand.tiktokPixelId && <Script id="tiktok-pixel" strategy="afterInteractive">{pixelLoader(store.brand.tiktokPixelId)}</Script>}
     </div>
   );
 }

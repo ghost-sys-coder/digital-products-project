@@ -17,7 +17,7 @@ export type Media = { path: string; kind: "image" | "video"; alt: string; poster
 
 /** File types each media kind may use; the storefront bucket accepts exactly these. */
 export const MEDIA_EXTENSIONS = { image: ["png", "jpg", "jpeg", "webp", "avif", "gif"], video: ["mp4", "webm"] } as const;
-export function isAnimatedImage(path: string) { return /.gif$/i.test(path); }
+export function isAnimatedImage(path: string) { return /\.gif$/i.test(path); }
 /** Background treatment: the page colour, the theme's soft surface, or a wash of the brand accent. */
 export type Tone = "plain" | "soft" | "accent";
 /** Bento: how many cells a tile spans. Masonry: the tile's shape (small 1:1, wide 4:3, tall 3:4, large 4:5). */
