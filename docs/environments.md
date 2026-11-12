@@ -52,6 +52,8 @@ Done on 12 November 2026: the project is created, all migrations are applied (sc
 
 ### 3. Staging address
 
+Done on 12 November 2026: `staging` branch, `staging.pod.veilcode.studio` (assigned to `staging`, DNS on Vercel), Standard Protection, and a Protection Bypass for Automation secret (kept in `.env.prev.local` as `VERCEL_AUTOMATION_BYPASS_SECRET`).
+
 1. Create a long-lived `staging` git branch.
 2. Vercel → Domains: add `staging.pod.veilcode.studio`, assigned to Git branch `staging`, and add its DNS record.
 3. Vercel → Deployment Protection: use **Standard Protection**, so preview custom domains require a Vercel login too. The current mode excludes custom domains, which would leave staging public.
@@ -62,6 +64,8 @@ Done on 12 November 2026: the project is created, all migrations are applied (sc
 Done on 12 November 2026: separate Resend key, preview owner, allowlist, and `ADMIN_SECRET` are set, and `npm run env:check -- .env.prev.local` passes. Recommended: recreate the preview Resend key with **Sending access** only (it currently has full access).
 
 ### 5. Vercel preview scope
+
+Done on 12 November 2026: shared variables are Production-only; preview values are scoped to the `staging` branch (secrets marked sensitive); the test-mode Stripe endpoint `we_1UaxNTHiapzsY1Cy3DRTtghV` delivers to staging; an end-to-end test purchase was delivered from the preview project only. Other preview branches receive no data or email credentials.
 
 1. Replace every variable shared by Preview and Production with separate entries, one per scope, using the values checked in step 4. Scope preview values to the `staging` branch where possible.
 2. Stripe (test mode): add a webhook endpoint at `https://staging.pod.veilcode.studio/api/stripe-webhook?x-vercel-protection-bypass=<secret>` for `checkout.session.completed` and `checkout.session.async_payment_succeeded`. Store its signing secret as the Preview `STRIPE_WEBHOOK_SECRET`.
