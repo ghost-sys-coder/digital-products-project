@@ -56,6 +56,7 @@ The **section library** is arranged by the owner in admin, per product. Each sec
 | Benefits | Icon and short-text grid, or "spotlight": the product in a circle with benefits on both sides |
 | Feature blocks | Alternating image or video with text and a small label above each heading |
 | Image banner | Full-width photo or video with overlaid headline and button |
+| Bento or masonry grid | Up to 12 photo, icon, or stat tiles: a packed bento grid (small, wide, tall, large) or staggered masonry columns |
 | Statement | Large quote or mission line on a soft or accent-tinted band |
 | Video / UGC strip | Short vertical clips, TikTok-style |
 | How it works | Numbered steps |

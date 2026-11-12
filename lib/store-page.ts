@@ -15,6 +15,9 @@ export type IconName = (typeof ICONS)[number];
 export type Media = { path: string; kind: "image" | "video"; alt: string };
 /** Background treatment: the page colour, the theme's soft surface, or a wash of the brand accent. */
 export type Tone = "plain" | "soft" | "accent";
+/** Bento: how many cells a tile spans. Masonry: the tile's shape (small 1:1, wide 4:3, tall 3:4, large 4:5). */
+export type TileSize = "small" | "wide" | "tall" | "large";
+export type BentoTile = { size: TileSize; media: Media | null; icon: IconName | null; title: string; text: string; tone: Tone };
 
 type SectionData = {
   announcement: { text: string };
@@ -23,6 +26,7 @@ type SectionData = {
   benefits: { title: string; layout: "grid" | "spotlight"; media: Media | null; items: { icon: IconName; title: string; text: string }[] };
   features: { items: { eyebrow: string; title: string; text: string; media: Media | null }[] };
   image_banner: { media: Media | null; headline: string; text: string; buttonLabel: string };
+  bento: { eyebrow: string; title: string; layout: "bento" | "masonry"; tiles: BentoTile[] };
   statement: { quote: string; attribution: string; tone: Tone };
   video_strip: { title: string; videos: { media: Media; caption: string }[] };
   how_it_works: { title: string; steps: { title: string; text: string }[] };
@@ -40,7 +44,7 @@ export type StorePage = { version: typeof STORE_PAGE_VERSION; sections: Section[
 
 export const SECTION_LABELS: Record<SectionType, string> = {
   announcement: "Announcement bar", hero: "Hero and buy box", showcase: "Showcase banner", benefits: "Benefits",
-  features: "Feature blocks", image_banner: "Image banner", statement: "Statement or quote",
+  features: "Feature blocks", image_banner: "Image banner", bento: "Bento or masonry grid", statement: "Statement or quote",
   video_strip: "Video strip", how_it_works: "How it works", comparison: "Comparison", size_guide: "Size guide",
   specs: "Specs or ingredients", reviews: "Verified reviews", guarantee: "Guarantee and shipping", faq: "FAQ",
   final_cta: "Final call to action",
@@ -108,6 +112,22 @@ function parseData(type: SectionType, raw: Record<string, unknown>, path: string
     case "image_banner": return {
       media: raw.media ? media(raw.media, `${path}.media`, prefix) : null, headline: text(raw.headline, `${path}.headline`, 120),
       text: text(raw.text, `${path}.text`, 300), buttonLabel: text(raw.buttonLabel, `${path}.buttonLabel`, 30),
+    };
+    case "bento": return {
+      eyebrow: text(raw.eyebrow, `${path}.eyebrow`, 60), title: text(raw.title, `${path}.title`, 100),
+      layout: choice(raw.layout, ["bento", "masonry"] as const, "bento"),
+      tiles: list(raw.tiles, `${path}.tiles`, 12, (entry, p) => {
+        const item = object(entry, p);
+        const tile: BentoTile = {
+          size: choice(item.size, ["small", "wide", "tall", "large"] as const, "small"),
+          media: item.media ? media(item.media, `${p}.media`, prefix) : null,
+          icon: (ICONS as readonly string[]).includes(item.icon as string) ? item.icon as IconName : null,
+          title: text(item.title, `${p}.title`, 60), text: text(item.text, `${p}.text`, 160),
+          tone: choice(item.tone, TONES, "soft"),
+        };
+        if (!tile.media && !tile.title) fail(p, "needs an image or a title");
+        return tile;
+      }),
     };
     case "statement": return {
       quote: text(raw.quote, `${path}.quote`, 300, true), attribution: text(raw.attribution, `${path}.attribution`, 80),

@@ -131,6 +131,34 @@ export function StoreSection({ section, ctx }: { section: Section; ctx: Context 
         </section>
       );
     }
+    case "bento": {
+      const { data } = section;
+      if (!data.tiles.length) return null;
+      const sizes = data.layout === "masonry"
+        ? "(max-width: 960px) 50vw, 33vw"
+        : { small: "(max-width: 960px) 50vw, 25vw", wide: "(max-width: 960px) 100vw, 50vw", tall: "(max-width: 960px) 50vw, 25vw", large: "(max-width: 960px) 100vw, 50vw" };
+      return (
+        <section className={`st-section st-bento-section layout-${data.layout}`} id={section.id}>
+          <div className="st-shell">
+            <Heading center eyebrow={data.eyebrow}>{data.title}</Heading>
+            <ul className={data.layout === "masonry" ? "st-masonry" : "st-bento"}>
+              {data.tiles.map((tile, index) => (
+                <li key={`${tile.title}-${index}`} className={`st-tile size-${tile.size} tone-${tile.tone}${tile.media ? " has-media" : ""}`}>
+                  {tile.media && <Visual media={tile.media} ctx={ctx} sizes={typeof sizes === "string" ? sizes : sizes[tile.size]} className="st-tile-media" />}
+                  {(tile.icon || tile.title || tile.text) && (
+                    <div className="st-tile-copy">
+                      {tile.icon && !tile.media && <span className="st-icon"><StoreIcon name={tile.icon} /></span>}
+                      {tile.title && <h3>{tile.title}</h3>}
+                      {tile.text && <p>{tile.text}</p>}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      );
+    }
     case "statement": {
       const { data } = section;
       return (

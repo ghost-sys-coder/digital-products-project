@@ -96,3 +96,22 @@ describe("showcase, banner, and statement sections", () => {
     expect(() => parseStorePage(page([{ id: "f", type: "features", data: { items: [{ eyebrow: "x".repeat(41), title: "t" }] } }]), STORE, PRODUCT)).toThrow(/40 characters/);
   });
 });
+
+describe("bento and masonry grids", () => {
+  it("normalises tile sizes, tones and icons, and keeps the layout", () => {
+    const parsed = parseStorePage(page([{ id: "g", type: "bento", data: { title: "Details", layout: "masonry", tiles: [
+      { size: "huge", tone: "loud", icon: "<svg>", title: "12 colours" },
+      { size: "large", media: { path: `${prefix}media/a.webp`, kind: "image", alt: "Room" } },
+    ] } }]), STORE, PRODUCT);
+    expect(parsed.sections[0].data).toMatchObject({ layout: "masonry", tiles: [
+      { size: "small", tone: "soft", icon: null, title: "12 colours", media: null },
+      { size: "large", media: { kind: "image" }, title: "" },
+    ] });
+  });
+
+  it("refuses empty tiles, too many tiles, and media from elsewhere", () => {
+    expect(() => parseStorePage(page([{ id: "g", type: "bento", data: { tiles: [{ size: "small" }] } }]), STORE, PRODUCT)).toThrow(/needs an image or a title/);
+    expect(() => parseStorePage(page([{ id: "g", type: "bento", data: { tiles: Array.from({ length: 13 }, () => ({ title: "x" })) } }]), STORE, PRODUCT)).toThrow(/at most 12/);
+    expect(() => parseStorePage(page([{ id: "g", type: "bento", data: { tiles: [{ media: { path: "elsewhere/a.webp", kind: "image" } }] } }]), STORE, PRODUCT)).toThrow(/not a file from this store/);
+  });
+});
