@@ -32,7 +32,8 @@ export function seedProduct(overrides: Partial<CatalogProduct> = {}): CatalogPro
     description: "Practical resources for your studio.", includes: ["A guide", "Templates"], status: "published",
     stripe_product_id: "prod_seed", stripe_price_id: "price_seed", price_amount: 2900, currency: "usd", stripe_livemode: false,
     storage_path: `${STORE_ID}/kit/file.pdf`, download_filename: "Studio-Kit.pdf", templates_url: null,
-    cover_path: null, cover_type: null, sort_order: 0, revision: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), ...overrides,
+    cover_path: null, cover_type: null, sort_order: 0, revision: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    kind: "digital", theme: null, brand: {}, page: null, shipping_profile_id: null, ...overrides,
   };
   state.products.push(product);
   if (product.stripe_product_id) state.stripeProducts.set(product.stripe_product_id, { id: product.stripe_product_id, name: product.name, livemode: false, metadata: { store_id: product.store_id, product_id: product.id } });

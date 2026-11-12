@@ -67,6 +67,11 @@ export async function handleStripeWebhook(req: Request, connected = false) {
         console.warn("Checkout does not match its reserved purchase", { sessionId: session.id });
         return Response.json({ received: true });
       }
+      if ((checkout.kind ?? "digital") !== "digital" || !checkout.product_snapshot) {
+        // Physical fulfilment is added with physical checkout; never treat it as a download.
+        console.warn("Physical checkout is not handled by the digital delivery path", { sessionId: session.id });
+        return Response.json({ error: "Physical fulfilment unavailable" }, { status: 500 });
+      }
       productId = checkout.product_id;
       productSnapshot = checkout.product_snapshot;
       await bindCheckoutSession(checkout.id, session.id, connection?.store_id);
