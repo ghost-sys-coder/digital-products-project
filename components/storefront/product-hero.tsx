@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Minus, Plus, Truck } from "lucide-react";
-import type { Media } from "@/lib/store-page";
+import { ChevronLeft, ChevronRight, Minus, Play, Plus, Truck } from "lucide-react";
+import { isAnimatedImage, type Media } from "@/lib/store-page";
 import type { PublicOption, PublicShipping, PublicVariant } from "@/lib/storefront";
 import { StoreIcon, badgeIcon } from "./icons";
+import { StoreVideo } from "./store-video";
 
 type Props = {
   productId: string; name: string; headline: string; subheadline: string; tagline: string;
@@ -62,7 +63,7 @@ export function ProductHero(props: Props) {
   const slides = useMemo(() => {
     const list: Media[] = [...props.media];
     for (const item of variants) {
-      if (item.image && !list.some((entry) => entry.path === item.image)) list.push({ path: item.image, kind: "image", alt: `${props.name} – ${item.label}` });
+      if (item.image && !list.some((entry) => entry.path === item.image)) list.push({ path: item.image, kind: "image", alt: `${props.name} – ${item.label}`, poster: null });
     }
     return list;
   }, [props.media, props.name, variants]);
@@ -155,8 +156,8 @@ export function ProductHero(props: Props) {
               {slides.map((entry, index) => (
                 <div className="st-gallery-slide" key={entry.path} aria-hidden={index !== slide}>
                   {entry.kind === "video"
-                    ? <video src={props.mediaBase + entry.path} muted loop playsInline autoPlay={index === 0} preload="metadata" aria-label={entry.alt} />
-                    : <Image src={props.mediaBase + entry.path} alt={entry.alt || props.name} fill sizes="(max-width: 960px) 100vw, 52vw" preload={index === 0} loading={index === 0 ? "eager" : "lazy"} />}
+                    ? <StoreVideo src={props.mediaBase + entry.path} poster={entry.poster && props.mediaBase + entry.poster} label={entry.alt || props.name} active={index === slide} sound />
+                    : <Image src={props.mediaBase + entry.path} alt={entry.alt || props.name} fill sizes="(max-width: 960px) 100vw, 52vw" preload={index === 0} loading={index === 0 ? "eager" : "lazy"} unoptimized={isAnimatedImage(entry.path)} />}
                 </div>
               ))}
             </div>
@@ -170,8 +171,10 @@ export function ProductHero(props: Props) {
           {slides.length > 1 && (
             <div className="st-thumbs" role="tablist" aria-label="Product images">
               {slides.map((entry, index) => (
-                <button type="button" role="tab" aria-selected={index === slide} key={entry.path} className="st-thumb" onClick={() => goTo(index)} aria-label={`Show image ${index + 1}`}>
-                  {entry.kind === "video" ? <span className="st-thumb-video">▶</span> : <Image src={props.mediaBase + entry.path} alt="" fill sizes="80px" />}
+                <button type="button" role="tab" aria-selected={index === slide} key={entry.path} className="st-thumb" onClick={() => goTo(index)} aria-label={entry.kind === "video" ? `Play video ${index + 1}` : `Show image ${index + 1}`}>
+                  {entry.kind === "video"
+                    ? <>{entry.poster && <Image src={props.mediaBase + entry.poster} alt="" fill sizes="80px" />}<span className="st-thumb-video"><Play size={14} fill="currentColor" aria-hidden /></span></>
+                    : <Image src={props.mediaBase + entry.path} alt="" fill sizes="80px" unoptimized={isAnimatedImage(entry.path)} />}
                 </button>
               ))}
             </div>
@@ -243,7 +246,7 @@ export function ProductHero(props: Props) {
 
       <div className={`st-sticky-bar${barVisible ? " visible" : ""}`} aria-hidden={!barVisible}>
         <div className="st-shell st-sticky-inner">
-          {thumb && <span className="st-sticky-thumb"><Image src={props.mediaBase + thumb} alt="" fill sizes="48px" /></span>}
+          {thumb && <span className="st-sticky-thumb"><Image src={props.mediaBase + thumb} alt="" fill sizes="48px" unoptimized={isAnimatedImage(thumb)} /></span>}
           <span className="st-sticky-text"><strong>{props.name}</strong><span>{variant?.label ? `${variant.label} · ` : ""}{money(price, currency)}</span></span>
           <button type="button" className="st-button" onClick={buy} disabled={!variant || pending} tabIndex={barVisible ? 0 : -1}>{cta}</button>
         </div>

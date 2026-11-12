@@ -115,3 +115,28 @@ describe("bento and masonry grids", () => {
     expect(() => parseStorePage(page([{ id: "g", type: "bento", data: { tiles: [{ media: { path: "elsewhere/a.webp", kind: "image" } }] } }]), STORE, PRODUCT)).toThrow(/not a file from this store/);
   });
 });
+
+describe("store videos and GIFs", () => {
+  const video = (extra: Record<string, unknown> = {}) => ({ path: `${prefix}media/clip.mp4`, kind: "video", alt: "Clip", ...extra });
+  it("accepts GIFs as images and videos with a poster image", () => {
+    const parsed = parseStorePage(page([hero({ media: [
+      { path: `${prefix}media/a.webp`, kind: "image" }, { path: `${prefix}media/spin.gif`, kind: "image" },
+      video({ poster: `${prefix}media/clip-poster.webp` }), video({ path: `${prefix}media/clip.webm` }),
+    ] })]), STORE, PRODUCT);
+    const media = (parsed.sections[0].data as { media: { kind: string; poster: string | null }[] }).media;
+    expect(media.map((item) => [item.kind, item.poster])).toEqual([["image", null], ["image", null], ["video", `${prefix}media/clip-poster.webp`], ["video", null]]);
+  });
+
+  it("refuses files whose type doesn't match the media kind, and foreign posters", () => {
+    for (const item of [
+      { path: `${prefix}media/clip.mp4`, kind: "image" }, { path: `${prefix}media/a.webp`, kind: "video" },
+      { path: `${prefix}media/file.pdf`, kind: "image" }, { path: `${prefix}media/page.html`, kind: "video" },
+      video({ poster: `${prefix}media/other.mp4` }), video({ poster: "elsewhere/poster.webp" }),
+    ]) expect(() => parseStorePage(page([hero({ media: [{ path: `${prefix}media/a.webp`, kind: "image" }, item] })]), STORE, PRODUCT)).toThrow(StorePageError);
+  });
+
+  it("drops a poster given for an image", () => {
+    const parsed = parseStorePage(page([hero({ media: [{ path: `${prefix}media/a.webp`, kind: "image", poster: `${prefix}media/p.webp` }] })]), STORE, PRODUCT);
+    expect((parsed.sections[0].data as { media: { poster: string | null }[] }).media[0].poster).toBeNull();
+  });
+});

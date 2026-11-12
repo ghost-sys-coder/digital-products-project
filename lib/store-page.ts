@@ -12,7 +12,12 @@ export const ICONS = [
 ] as const;
 export type IconName = (typeof ICONS)[number];
 
-export type Media = { path: string; kind: "image" | "video"; alt: string };
+/** A store image (including animated GIF) or a short muted video. Videos may name a poster image. */
+export type Media = { path: string; kind: "image" | "video"; alt: string; poster: string | null };
+
+/** File types each media kind may use; the storefront bucket accepts exactly these. */
+export const MEDIA_EXTENSIONS = { image: ["png", "jpg", "jpeg", "webp", "avif", "gif"], video: ["mp4", "webm"] } as const;
+export function isAnimatedImage(path: string) { return /.gif$/i.test(path); }
 /** Background treatment: the page colour, the theme's soft surface, or a wash of the brand accent. */
 export type Tone = "plain" | "soft" | "accent";
 /** Bento: how many cells a tile spans. Masonry: the tile's shape (small 1:1, wide 4:3, tall 3:4, large 4:5). */
@@ -85,13 +90,21 @@ const TONES = ["plain", "soft", "accent"] as const;
 
 /** Storefront media must sit in this product's folder of the public storefront bucket. */
 export function mediaPrefix(storeId: string, productId: string) { return `${storeId}/${productId}/`; }
+function storeFile(value: unknown, path: string, prefix: string, kind: Media["kind"]) {
+  const filePath = text(value, path, 300, true);
+  if (!filePath.startsWith(prefix) || !/^[A-Za-z0-9/_.-]+$/.test(filePath) || filePath.includes("..")) fail(path, "is not a file from this store");
+  const extension = filePath.split(".").pop()!.toLowerCase();
+  if (!(MEDIA_EXTENSIONS[kind] as readonly string[]).includes(extension)) fail(path, `must be a ${MEDIA_EXTENSIONS[kind].join(", ")} file`);
+  return filePath;
+}
 function media(value: unknown, path: string, prefix: string, kinds: Media["kind"][] = ["image", "video"]): Media {
   const raw = object(value, path);
-  const mediaPath = text(raw.path, `${path}.path`, 300, true);
-  if (!mediaPath.startsWith(prefix) || !/^[A-Za-z0-9/_.-]+$/.test(mediaPath) || mediaPath.includes("..")) fail(`${path}.path`, "is not a file from this store");
   const kind = raw.kind === "video" ? "video" : raw.kind === "image" ? "image" : fail(`${path}.kind`, "must be image or video");
   if (!kinds.includes(kind)) fail(`${path}.kind`, `must be ${kinds.join(" or ")}`);
-  return { path: mediaPath, kind, alt: text(raw.alt, `${path}.alt`, 160) };
+  const mediaPath = storeFile(raw.path, `${path}.path`, prefix, kind);
+  // A poster is the still shown before a video loads, and for visitors who turned off motion.
+  const poster = kind === "video" && raw.poster ? storeFile(raw.poster, `${path}.poster`, prefix, "image") : null;
+  return { path: mediaPath, kind, alt: text(raw.alt, `${path}.alt`, 160), poster };
 }
 
 function parseData(type: SectionType, raw: Record<string, unknown>, path: string, prefix: string): SectionData[SectionType] {

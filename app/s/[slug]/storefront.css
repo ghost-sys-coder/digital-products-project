@@ -119,7 +119,8 @@
 }
 .st-thumb img { object-fit: cover; }
 .st-thumb[aria-selected="true"] { opacity: 1; box-shadow: 0 0 0 2px var(--st-text); }
-.st-thumb-video { display: grid; place-items: center; height: 100%; font-size: 18px; color: var(--st-muted); }
+.st-thumb-video { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; background: rgb(0 0 0 / 0.28); }
+.st-thumb-video svg { filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.5)); }
 
 .st-buybox { display: grid; gap: 22px; padding-top: 8px; }
 .st-buybox .st-eyebrow { margin-bottom: -10px; justify-self: start; }
@@ -503,6 +504,20 @@ html:has(.st) { scroll-behavior: smooth; scroll-padding-top: 84px; }
   .st-tile.tone-accent p { color: color-mix(in srgb, var(--st-on-accent) 80%, transparent); }
   .st-compare-table thead .ours { color: color-mix(in srgb, var(--st-accent) 75%, var(--st-text)); }
 }
+
+/* Store videos: the wrapper fills its frame; clips meant to be watched get a sound toggle. */
+.st-video-wrap { position: relative; width: 100%; height: 100%; }
+.st-gallery-slide .st-video-wrap video, .st-feature-visual .st-video-wrap video { width: 100%; height: 100%; object-fit: cover; }
+.st-tile .st-video-wrap, .st-banner-frame .st-video-wrap { position: absolute; inset: 0; z-index: -2; }
+.st-video .st-video-wrap { height: auto; }
+.st-sound {
+  position: absolute; right: 12px; bottom: 12px; z-index: 2; display: grid; place-items: center;
+  width: 38px; height: 38px; border: 0; border-radius: 999px; cursor: pointer;
+  background: rgb(0 0 0 / 0.5); color: #fff; transition: transform 160ms var(--st-ease), background 160ms;
+}
+.st-sound:hover { background: rgb(0 0 0 / 0.7); }
+.st-sound:active { transform: scale(0.94); }
+.st-gallery-main .st-sound { bottom: 50px; }
 
 /* Preview and development only: let the environment banner scroll away on store pages so it never
    covers the store's own sticky header. This stylesheet only loads on /s/ routes. */

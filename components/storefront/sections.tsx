@@ -1,9 +1,9 @@
 import Image from "next/image";
 import { Check, Minus, ShieldCheck } from "lucide-react";
-import type { Media, Section } from "@/lib/store-page";
+import { isAnimatedImage, type Media, type Section } from "@/lib/store-page";
 import type { PublicShipping } from "@/lib/storefront";
 import { StoreIcon } from "./icons";
-import { InViewVideo } from "./in-view-video";
+import { StoreVideo } from "./store-video";
 
 // Server-rendered marketing sections. Every value here has already been through parseStorePage,
 // and is rendered as text: nothing on a store page is ever interpreted as HTML.
@@ -14,9 +14,12 @@ function money(amount: number, currency: string) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: amount % 100 ? 2 : 0 }).format(amount / 100);
 }
 
-function Visual({ media, ctx, sizes, className }: { media: Media; ctx: Context; sizes: string; className?: string }) {
-  if (media.kind === "video") return <InViewVideo className={className} src={ctx.mediaBase + media.path} label={media.alt || ctx.productName} />;
-  return <Image className={className} src={ctx.mediaBase + media.path} alt={media.alt} fill sizes={sizes} />;
+/** An image (GIFs are served as-is: Next.js doesn't re-encode animation) or a store video. */
+function Visual({ media, ctx, sizes, className, sound = false }: { media: Media; ctx: Context; sizes: string; className?: string; sound?: boolean }) {
+  if (media.kind === "video") {
+    return <StoreVideo className={className} src={ctx.mediaBase + media.path} poster={media.poster && ctx.mediaBase + media.poster} label={media.alt || ctx.productName} sound={sound} />;
+  }
+  return <Image className={className} src={ctx.mediaBase + media.path} alt={media.alt} fill sizes={sizes} unoptimized={isAnimatedImage(media.path)} />;
 }
 
 function Heading({ children, eyebrow, center = false }: { children: React.ReactNode; eyebrow?: string; center?: boolean }) {
@@ -98,7 +101,7 @@ export function StoreSection({ section, ctx }: { section: Section; ctx: Context 
           <div className="st-shell st-feature-list">
             {data.items.map((item, index) => (
               <article className={`st-feature${index % 2 ? " flip" : ""}${item.media ? "" : " text-only"}`} key={`${item.title}-${index}`}>
-                {item.media && <div className="st-feature-visual"><Visual media={item.media} ctx={ctx} sizes="(max-width: 960px) 100vw, 50vw" /></div>}
+                {item.media && <div className="st-feature-visual"><Visual media={item.media} ctx={ctx} sizes="(max-width: 960px) 100vw, 50vw" sound /></div>}
                 <div className="st-feature-copy">
                   {item.eyebrow && <p className="st-eyebrow">{item.eyebrow}</p>}
                   <h2>{item.title}</h2>
@@ -179,7 +182,7 @@ export function StoreSection({ section, ctx }: { section: Section; ctx: Context 
           <div className="st-video-row">
             {data.videos.map((video) => (
               <figure className="st-video" key={video.media.path}>
-                <InViewVideo src={ctx.mediaBase + video.media.path} label={video.media.alt || video.caption || ctx.productName} />
+                <StoreVideo src={ctx.mediaBase + video.media.path} poster={video.media.poster && ctx.mediaBase + video.media.poster} label={video.media.alt || video.caption || ctx.productName} sound />
                 {video.caption && <figcaption>{video.caption}</figcaption>}
               </figure>
             ))}
