@@ -13,8 +13,9 @@ export const maxDuration = 60;
  * /admin/connections. See lib/mcp/server.ts for the tools.
  */
 async function handle(req: Request) {
-  const caller = await verifyBearer(req.headers.get("authorization")).catch(() => null);
-  if (!caller) return unauthorized();
+  const authorization = req.headers.get("authorization");
+  const caller = authorization ? await verifyBearer(authorization).catch(() => null) : null;
+  if (!caller) return unauthorized(!!authorization);
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   const server = buildMcpServer(caller);
   await server.connect(transport);
