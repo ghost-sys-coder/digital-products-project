@@ -6,11 +6,13 @@ import type { Store } from "@/lib/catalog.types";
 import { LEGAL_KINDS, LEGAL_TITLES, LEGAL_UPDATED, legalDocument, type LegalKind } from "@/lib/site-legal";
 import { monaSans } from "@/app/studio-fonts";
 import { SiteFooter, SiteHeader, SUPPORT_FALLBACK } from "./chrome";
+import { PageEffects } from "./page-effects";
 
 // One layout for /privacy, /terms, /refunds and /data-deletion. Styles: app/studio.css (.vc-legal).
 
 const FALLBACK_STORE: Store = { id: "", owner_user_id: null, name: "VeilCode Studio", tagline: "", bio: "", support_email: SUPPORT_FALLBACK, website_url: null };
-const dateFormat =new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" });
+const ROOT_ID = "vc-legal-page";
+const dateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" });
 
 export function legalMetadata(kind: LegalKind): Metadata {
   return { title: LEGAL_TITLES[kind], description: legalDocument(kind, SUPPORT_FALLBACK).intro };
@@ -22,7 +24,9 @@ export async function LegalPage({ kind }: { kind: LegalKind }) {
   const support = store?.support_email || SUPPORT_FALLBACK;
   const doc = legalDocument(kind, support);
   return (
-    <div className={`vc ${monaSans.variable}`}>
+    <div id={ROOT_ID} className={`vc ${monaSans.variable}`}>
+      <PageEffects rootId={ROOT_ID} />
+      <span className="vc-sentinel" data-top-sentinel aria-hidden="true" />
       <SiteHeader base="/" cta={false} />
       <main className="vc-wrap vc-legal">
         <Link className="vc-back" href="/"><ArrowLeft size={16} aria-hidden="true" /> VeilCode Studio</Link>
