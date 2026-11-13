@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Plus, ArrowUpRight, Package, Store } from "lucide-react";
+import { Plus, ArrowUpRight, Eye, Package, PencilLine, Store } from "lucide-react";
 import { ownerPage } from "@/lib/auth";
 import { getStore, listProducts } from "@/lib/catalog";
 import { getSupabase } from "@/lib/supabase";
 import { AdminShell } from "@/components/admin-shell";
 import { formatMoney, STORE_ID } from "@/lib/store-config";
 import { THEME_TOKENS, type ThemeId } from "@/lib/store-themes";
+import { productPageHref } from "@/lib/product-links";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,13 @@ export default async function ProductsPage() {
           </div>
           <span className={`badge ${product.status}`}>{product.status === "published" ? (physical ? "Live" : "Published") : "Draft"}</span>
           <strong className="catalog-price">{price}</strong>
-          <Link className="button secondary small" href={`/admin/products/${product.id}`}>Edit <ArrowUpRight size={14} /></Link>
+          <div className="catalog-actions">
+            <a className="button secondary small" href={productPageHref(product)} target="_blank" rel="noopener noreferrer"
+              aria-label={`${product.status === "published" ? "View" : "Preview"} the page for ${product.name} in a new tab`}>
+              {product.status === "published" ? <>View <ArrowUpRight size={14} aria-hidden="true" /></> : <>Preview <Eye size={14} aria-hidden="true" /></>}
+            </a>
+            <Link className="button secondary small" href={`/admin/products/${product.id}`}><PencilLine size={14} aria-hidden="true" /> Edit</Link>
+          </div>
         </div>;
       })}</div> : <div className="empty-state"><Package size={29} /><h3>A home for your first idea.</h3><p>Add a digital product or open a store for a physical one.</p><Link href="/admin/products/new-store" className="button primary"><Store size={16} /> New store</Link></div>}
     </section>

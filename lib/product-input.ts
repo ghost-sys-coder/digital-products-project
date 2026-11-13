@@ -4,7 +4,12 @@ export type ProductInput = {
   id: string; revision: number; name: string; slug: string; tagline: string;
   description: string; includes: string[]; price_amount: number; currency: Currency;
   templates_url: string; status: "draft" | "published"; sort_order: number;
+  /** Undefined when the form doesn't carry the field (assistant drafts), which keeps the saved list. */
+  related_ids?: string[];
 };
+
+export const MAX_RELATED = 4;
+const PRODUCT_ID = /^(lead-to-kickoff|[0-9a-f-]{36})$/;
 export function parseProductInput(form: FormData): ProductInput {
   const read = (key: string, max: number) => {
     const value = form.get(key);
@@ -19,7 +24,7 @@ export function parseProductInput(form: FormData): ProductInput {
   const currency = read("currency", 3);
   const status = read("status", 10);
   const sort_order = Number(read("sort_order", 7));
-  if (!/^(lead-to-kickoff|[0-9a-f-]{36})$/.test(id) || !Number.isInteger(revision) || revision < 0) throw new Error("Invalid product identifier or revision.");
+  if (!PRODUCT_ID.test(id) || !Number.isInteger(revision) || revision < 0) throw new Error("Invalid product identifier or revision.");
   if (!name || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) throw new Error("Add a name and a lowercase URL slug (letters, numbers, and hyphens).");
   if (!/^\d+(\.\d{1,2})?$/.test(price)) throw new Error("Enter a price with up to two decimal places.");
   const price_amount = Math.round(Number(price) * 100);
@@ -33,5 +38,14 @@ export function parseProductInput(form: FormData): ProductInput {
     id, revision, name, slug, price_amount, currency: currency as Currency, status, sort_order,
     tagline: read("tagline", 200), description: read("description", 10000), includes,
     templates_url: read("templates_url", 2000),
+    related_ids: form.has("related") ? parseRelated(read("related", 1000), id) : undefined,
   };
+}
+
+/** "id,id" in display order. Duplicates and the product itself are dropped. */
+function parseRelated(value: string, self: string) {
+  const ids = [...new Set(value.split(",").map((entry) => entry.trim()).filter((entry) => entry && entry !== self))];
+  if (ids.length > MAX_RELATED) throw new Error(`Choose up to ${MAX_RELATED} related products.`);
+  if (!ids.every((entry) => PRODUCT_ID.test(entry))) throw new Error("Invalid related product.");
+  return ids;
 }
