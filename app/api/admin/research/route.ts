@@ -3,6 +3,7 @@ import { apiError, HttpError, jsonObject, sameOrigin } from "@/lib/http";
 import { createResearch, createStoreFromResearch, deleteResearch, updateResearch } from "@/lib/research";
 import { searchMetaAds } from "@/lib/meta-ads";
 import { cjDetail, searchCj } from "@/lib/cj";
+import { createDigitalFromResearch } from "@/lib/research-digital";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
       case "update": result = { item: await updateResearch(body) }; break;
       case "delete": result = await deleteResearch(body); break;
       case "create-store": result = await createStoreFromResearch(body); break;
+      case "create-digital": result = await createDigitalFromResearch(body); break;
       case "meta-search": result = await searchMetaAds(query()); break;
       case "cj-search": result = { products: await searchCj(query()) }; break;
       case "cj-detail": result = { supplier: await cjDetail(typeof body.pid === "string" ? body.pid : "") }; break;

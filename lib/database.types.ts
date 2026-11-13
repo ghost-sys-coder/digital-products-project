@@ -3,6 +3,18 @@ import type { PaymentConnection, PaymentOAuthAttempt, ProductPaymentRef } from "
 import type { RateInput, VariantInput } from "./store-input";
 import type { ResearchProduct } from "./research.types";
 // Mirrors the migrations. Keep these types with the schema.
+export type McpScope = "read" | "research" | "build";
+export type McpClient = { client_id: string; name: string; redirect_uris: string[]; secret_hash: string | null; created_at: string };
+export type McpConnection = {
+  id: string; store_id: string; kind: "oauth" | "token"; name: string; client_id: string | null; scopes: McpScope[];
+  created_at: string; last_used_at: string | null; revoked_at: string | null;
+};
+export type McpSecret = {
+  hash: string; kind: "code" | "access" | "refresh" | "personal"; connection_id: string;
+  details: Record<string, unknown>; expires_at: string | null; used_at: string | null; created_at: string;
+};
+export type McpActivity = { id: number; connection_id: string; tool: string; summary: string; ok: boolean; created_at: string };
+export type McpUpload = { id: string; connection_id: string; product_id: string; filename: string; size: number; parts: string[]; received: number; created_at: string };
 export type IntegrationToken = { provider: "cj"; access_token: string; expires_at: string; updated_at: string };
 export type Order = {
   id: string;
@@ -61,6 +73,11 @@ export type Database = {
         Update: Partial<ResearchProduct>;
         Relationships: [];
       };
+      mcp_clients: { Row: McpClient; Insert: Omit<McpClient, "created_at" | "secret_hash"> & { secret_hash?: string | null }; Update: Partial<McpClient>; Relationships: [] };
+      mcp_connections: { Row: McpConnection; Insert: Pick<McpConnection, "store_id" | "kind" | "name" | "scopes"> & Partial<McpConnection>; Update: Partial<McpConnection>; Relationships: [] };
+      mcp_secrets: { Row: McpSecret; Insert: Pick<McpSecret, "hash" | "kind" | "connection_id"> & Partial<McpSecret>; Update: Partial<McpSecret>; Relationships: [] };
+      mcp_activity: { Row: McpActivity; Insert: Pick<McpActivity, "connection_id" | "tool" | "summary" | "ok">; Update: Partial<McpActivity>; Relationships: [] };
+      mcp_uploads: { Row: McpUpload; Insert: Pick<McpUpload, "connection_id" | "product_id" | "filename" | "size"> & Partial<McpUpload>; Update: Partial<McpUpload>; Relationships: [] };
       integration_tokens: { Row: IntegrationToken; Insert: Omit<IntegrationToken, "updated_at"> & { updated_at?: string }; Update: Partial<IntegrationToken>; Relationships: [] };
       stores: { Row: Store; Insert: Store; Update: Partial<Store>; Relationships: [] };
       products: { Row: CatalogProduct; Insert: Pick<CatalogProduct, "id" | "store_id" | "slug" | "name"> & Partial<CatalogProduct>; Update: Partial<CatalogProduct>; Relationships: [] };

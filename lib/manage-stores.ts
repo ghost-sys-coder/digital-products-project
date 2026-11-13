@@ -11,7 +11,7 @@ import {
   isUuid, MAX_PROFILES_PER_SAVE, MAX_SLUG, parseShippingProfile, parseVariants, policiesForSave, SLUG_PATTERN,
   storeImagePath, StoreInputError, type ProfileInput, type RateInput, type VariantInput,
 } from "./store-input";
-import { findPoster, isGeneratedPoster, mediaExtension, mediaKind, mediaUploadProblem, posterPathFor, sniffMedia, STORE_MEDIA_TYPES, type StoreMediaFile } from "./store-media";
+import { findPoster, formatBytes, isGeneratedPoster, mediaExtension, mediaKind, mediaUploadProblem, posterPathFor, sniffMedia, STORE_MEDIA_TYPES, type StoreMediaExtension, type StoreMediaFile } from "./store-media";
 import { storefrontMediaBase } from "./storefront";
 import { pixelsWithServerEvents } from "./tiktok";
 import type { CatalogProduct, ProductVariant, ShippingProfile, ShippingRate } from "./catalog.types";
@@ -287,6 +287,27 @@ export async function confirmStoreMedia(raw: Record<string, unknown>): Promise<S
     throw await reject(`That file isn't a real ${extension.toUpperCase()} ${type.kind}. Export it again and retry.`);
   }
   return { path, kind: type.kind, size, createdAt: new Date().toISOString(), poster: null };
+}
+
+/** Detects a store media type from a file's first bytes, so a mislabelled download can't sneak in. */
+export function detectStoreMedia(bytes: Uint8Array): StoreMediaExtension | null {
+  return (Object.keys(STORE_MEDIA_TYPES) as StoreMediaExtension[]).find((extension) => sniffMedia(bytes, extension)) ?? null;
+}
+
+/**
+ * Saves a file an assistant sent (lib/mcp) into a store's media folder, after the same type and size
+ * checks the editor's uploads get. Returns the path to use in the page or variants.
+ */
+export async function importStoreMediaBytes(productId: string, bytes: Uint8Array): Promise<StoreMediaFile & { url: string }> {
+  const product = await loadPhysical(productId);
+  const extension = detectStoreMedia(bytes.subarray(0, 64));
+  if (!extension) throw new HttpError(400, "That file isn't a PNG, JPG, WebP, AVIF or GIF image, or an MP4 or WebM video.");
+  const type = STORE_MEDIA_TYPES[extension];
+  if (!bytes.length || bytes.length > type.maxBytes) throw new HttpError(400, `That ${type.kind} is too large. The limit is ${formatBytes(type.maxBytes)}.`);
+  const path = `${mediaFolder(product.id)}${randomUUID()}.${extension}`;
+  const { error } = await getSupabase().storage.from(BUCKET).upload(path, bytes, { contentType: type.contentType, upsert: false });
+  if (error) throw new HttpError(503, "Could not save the file. Please try again.");
+  return { path, kind: type.kind, size: bytes.length, createdAt: new Date().toISOString(), poster: null, url: storefrontMediaBase() + path };
 }
 
 /** Deletes an unused file (and a video's generated poster). Files used by the saved store are kept. */

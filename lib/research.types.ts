@@ -17,12 +17,15 @@ export type ResearchSupplier = {
   source: "cj" | "manual"; id: string | null; name: string; url: string | null;
   cost: number; shipping: number | null; shippingName: string | null; days: string | null;
 };
+export const RESEARCH_KINDS = ["physical", "digital"] as const;
+export type ResearchKind = (typeof RESEARCH_KINDS)[number];
 export type ResearchProduct = {
-  id: string; title: string; stage: Stage; notes: string; image_url: string | null;
+  id: string; kind: ResearchKind; title: string; stage: Stage; notes: string; image_url: string | null;
   ads: ResearchAd[]; supplier: ResearchSupplier | null; target_price: number | null;
   store_product_id: string | null; created_at: string; updated_at: string;
 };
-export type ResearchCard = ResearchProduct & { store: { slug: string; status: string } | null };
+/** `store` is what was made from the idea: a physical store (/s/) or a digital product (/p/). */
+export type ResearchCard = ResearchProduct & { store: { slug: string; status: string; kind: "digital" | "physical" } | null };
 
 /** A Meta Ad Library result, already summarised for the board. */
 export type MetaAd = {
@@ -48,9 +51,16 @@ export function daysSince(date: string | null, now = Date.now()) {
 /** Card fees on the sale price: Stripe's standard US rate. An estimate, labelled as one in the UI. */
 export const cardFee = (price: number) => Math.round(price * 0.029) + 30;
 
-/** What one sale leaves after the product, shipping and card fees. Null until there's a price and a cost. */
-export function unitEconomics(item: Pick<ResearchProduct, "target_price" | "supplier">) {
-  if (item.target_price === null || !item.supplier) return null;
+/** What one sale leaves after the product, shipping and card fees. Null until there's a price and a cost.
+ *  Digital products have no supplier: a sale costs only the card fee. */
+export function unitEconomics(item: Pick<ResearchProduct, "target_price" | "supplier"> & { kind?: ResearchKind }) {
+  if (item.target_price === null) return null;
+  if (item.kind === "digital" && !item.supplier) {
+    const fees = cardFee(item.target_price);
+    const profit = item.target_price - fees;
+    return { landed: 0, fees, profit, margin: item.target_price > 0 ? profit / item.target_price : 0, shippingKnown: true };
+  }
+  if (!item.supplier) return null;
   const landed = item.supplier.cost + (item.supplier.shipping ?? 0);
   const fees = cardFee(item.target_price);
   const profit = item.target_price - landed - fees;
