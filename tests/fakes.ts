@@ -13,6 +13,7 @@ export const state = {
   orders: [] as Order[], products: [] as CatalogProduct[], checkouts: [] as Checkout[], stores: [] as Store[],
   payment_connections: [] as PaymentConnection[], payment_oauth_attempts: [] as PaymentOAuthAttempt[], product_payment_refs: [] as ProductPaymentRef[],
   product_variants: [] as ProductVariant[], shipping_rates: [] as ShippingRate[], shipping_profiles: [] as ShippingProfile[],
+  research_products: [] as Row[], integration_tokens: [] as Row[],
   dbError: false, insertError: null as DbError, markSentError: false,
   stripeProducts: new Map<string, Row>(), stripePrices: new Map<string, Row>(), sessions: new Map<string, Row>(), stripeShippingRates: new Map<string, Row>(),
 };
@@ -42,7 +43,7 @@ export function seedProduct(overrides: Partial<CatalogProduct> = {}): CatalogPro
   return product;
 }
 function rows(table: string): Row[] {
-  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs", "product_variants", "shipping_rates", "shipping_profiles"].includes(table)) throw new Error(`Unexpected table: ${table}`);
+  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs", "product_variants", "shipping_rates", "shipping_profiles", "research_products", "integration_tokens"].includes(table)) throw new Error(`Unexpected table: ${table}`);
   return state[table as "orders"] as unknown as Row[];
 }
 class Query implements PromiseLike<Result> {
@@ -53,6 +54,7 @@ class Query implements PromiseLike<Result> {
   insert(values: Row) { this.operation = "insert"; this.values = values; return this; }
   upsert(values: Row) { this.operation = "upsert"; this.values = values; return this; }
   update(values: Row) { this.operation = "update"; this.values = values; return this; }
+  delete() { this.operation = "delete"; return this; }
   select() { return this; }
   eq(key: string, value: unknown) { this.filters.push([key, value]); return this; }
   is(key: string, value: unknown) { return this.eq(key, value); }
@@ -65,7 +67,9 @@ class Query implements PromiseLike<Result> {
     if (state.dbError) return { data: null, error: { code: "08000", message: "Database unavailable" } };
     const tableRows = rows(this.table);
     if (this.operation === "upsert") {
-      const existing = tableRows.find(row => row.connection_id === this.values.connection_id && row.product_id === this.values.product_id);
+      const existing = this.table === "integration_tokens"
+        ? tableRows.find(row => row.provider === this.values.provider)
+        : tableRows.find(row => row.connection_id === this.values.connection_id && row.product_id === this.values.product_id);
       if (existing) Object.assign(existing, this.values); else tableRows.push({ ...this.values });
       return { data: null, error: null };
     }
@@ -83,6 +87,11 @@ class Query implements PromiseLike<Result> {
       return { data: { ...data }, error: null };
     }
     let matches = tableRows.filter((row) => this.filters.every(([key, value]) => row[key] === value) && this.greater.every(([key, value]) => String(row[key]) > String(value)));
+    if (this.operation === "delete") {
+      const doomed = new Set(matches);
+      state[this.table as "research_products"] = tableRows.filter((row) => !doomed.has(row));
+      return { data: null, error: null };
+    }
     if (this.operation === "update") {
       if (state.markSentError && this.values.email_status === "sent") return { data: null, error: { code: "08000", message: "Write failed" } };
       matches.forEach((row) => Object.assign(row, this.values));
@@ -187,6 +196,7 @@ export function resetFakes() {
   state.orders = []; state.products = []; state.checkouts = [];
   state.payment_connections = []; state.payment_oauth_attempts = []; state.product_payment_refs = [];
   state.product_variants = []; state.shipping_rates = []; state.shipping_profiles = [];
+  state.research_products = []; state.integration_tokens = [];
   shippingRatesRetrieve.mockReset().mockImplementation(async (id: string) => { const rate = state.stripeShippingRates.get(id); if (!rate) throw { code: "resource_missing" }; return { ...rate }; });
   state.stripeShippingRates.clear();
   refundsCreate.mockReset().mockImplementation(async (input: Row) => ({ id: "re_test_1", amount: 10795, payment_intent: input.payment_intent, status: "succeeded" }));

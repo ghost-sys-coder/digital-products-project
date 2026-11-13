@@ -1,0 +1,147 @@
+/* Product research (app/admin/research, components/research). Built on the workspace theme's tokens
+   (app/admin-theme.css): white raised panels on the cool canvas, cobalt for the one accent, and green or
+   red only for the profit signal. */
+
+.admin-shell .research { display: grid; gap: 26px; }
+.admin-shell .research .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.admin-shell .research .spin { animation: research-spin .8s linear infinite; }
+@keyframes research-spin { to { transform: rotate(360deg); } }
+.admin-shell .research code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--ad-wash); color: var(--ad-cobalt-deep); }
+
+/* Finder */
+.admin-shell .research-tabs { display: flex; gap: 6px; padding: 18px 26px 0; flex-wrap: wrap; }
+.admin-shell .research-tabs button {
+  border: 1px solid var(--ad-edge); background: #f6f7fb; color: var(--ad-soft); border-radius: 999px; padding: 8px 15px;
+  font-size: 13px; font-weight: 560; cursor: pointer; transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.admin-shell .research-tabs button:hover { color: var(--ad-text); }
+.admin-shell .research-tabs button.active { background: var(--ad-ink); border-color: var(--ad-ink); color: #fff; }
+.admin-shell .research-search, .admin-shell .research-manual { display: flex; gap: 10px; align-items: flex-end; padding: 16px 26px 4px; flex-wrap: wrap; }
+.admin-shell .research-finder { padding-bottom: 26px; }
+.admin-shell .research-search-field { position: relative; flex: 1 1 320px; margin: 0; }
+.admin-shell .research-search-field svg { position: absolute; left: 14px; top: 50%; translate: 0 -50%; color: var(--ad-soft); pointer-events: none; }
+.admin-shell .research-search-field input { margin: 0; padding-left: 40px; height: 46px; border-radius: 12px; font-size: 14px; }
+.admin-shell .research-manual label { flex: 1 1 240px; margin: 0; }
+.admin-shell .research-manual input { border-radius: 12px; height: 46px; }
+.admin-shell .research-finder .form-error { margin: 14px 26px 0; }
+.admin-shell .research-note { margin: 14px 26px 0; padding: 13px 16px; border-radius: 12px; background: #f6f7fb; color: var(--ad-soft); font-size: 13px; line-height: 1.6; }
+.admin-shell .research-note.warn { background: #fff8eb; color: #7a4d00; border: 1px solid #f4dfb5; }
+.admin-shell .research-elsewhere { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 14px 26px 0; font-size: 12.5px; color: var(--ad-soft); }
+.admin-shell .research-elsewhere a { display: inline-flex; align-items: center; gap: 3px; color: var(--ad-cobalt-deep); font-weight: 560; text-decoration: none; }
+.admin-shell .research-elsewhere a:hover { text-decoration: underline; }
+.admin-shell .research-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; padding: 20px 26px 0; }
+.admin-shell .research-ad, .admin-shell .research-cj {
+  display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--ad-edge); border-radius: 16px; background: #fbfcfe;
+  transition: border-color .2s ease, box-shadow .25s ease, transform .25s var(--ad-ease);
+}
+.admin-shell .research-ad:hover, .admin-shell .research-cj:hover { border-color: rgba(43, 89, 255, .28); box-shadow: 0 12px 26px -20px rgba(16, 24, 48, .45); transform: translateY(-1px); }
+.admin-shell .research-ad header { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.admin-shell .research-ad header span { color: var(--ad-soft); font-size: 11px; text-transform: capitalize; }
+.admin-shell .research-ad-title { margin: 0; font-size: 13.5px; font-weight: 620; line-height: 1.4; }
+.admin-shell .research-ad-text { margin: 0; font-size: 12.5px; color: var(--ad-soft); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.admin-shell .research-ad footer, .admin-shell .research-cj footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; padding-top: 4px; }
+.admin-shell .research-ad footer a, .admin-shell .research-cj footer a { display: inline-flex; align-items: center; gap: 3px; font-size: 12.5px; font-weight: 560; color: var(--ad-cobalt-deep); text-decoration: none; }
+.admin-shell .research-cj img, .admin-shell .research-cj-blank { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 11px; background: #eef0f5; }
+
+/* Signals: neutral by default, cobalt when strong, green/red only for profit */
+.admin-shell .research-signals { display: flex; flex-wrap: wrap; gap: 5px; }
+.admin-shell .signal { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px; background: #eef0f5; color: #4a5164; font-size: 11px; font-weight: 580; white-space: nowrap; }
+.admin-shell .signal.strong { background: var(--ad-wash); color: var(--ad-cobalt-deep); }
+.admin-shell .signal.good { background: #e6f6ee; color: #11683f; }
+.admin-shell .signal.bad { background: #fdecee; color: #a62434; }
+.admin-shell .signal.store { background: var(--ad-ink); color: #fff; }
+
+/* Board */
+.admin-shell .research-board { display: grid; grid-template-columns: repeat(6, minmax(172px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x proximity; }
+.admin-shell .research-column { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 14px; border-radius: 18px; background: rgba(255, 255, 255, .55); border: 1px solid var(--ad-edge); scroll-snap-align: start; }
+.admin-shell .research-column header { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; padding: 2px 4px; }
+.admin-shell .research-column h2 { margin: 0; font-size: 13.5px; font-weight: 640; letter-spacing: -.01em; }
+.admin-shell .research-column header > span { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: #e7eaf1; color: var(--ad-soft); font-size: 11px; font-weight: 620; text-align: center; }
+.admin-shell .research-column header p { grid-column: 1 / -1; margin: 0; font-size: 11.5px; color: var(--ad-soft); }
+.admin-shell .stage-testing header > span, .admin-shell .stage-live header > span { background: var(--ad-wash); color: var(--ad-cobalt-deep); }
+.admin-shell .research-cards { display: flex; flex-direction: column; gap: 10px; }
+.admin-shell .research-empty { margin: 0; padding: 18px 10px; border: 1px dashed #d7dce7; border-radius: 14px; color: var(--ad-soft); font-size: 12px; text-align: center; line-height: 1.5; }
+.admin-shell .research-card {
+  display: flex; flex-direction: column; gap: 9px; width: 100%; padding: 12px; text-align: left; font: inherit; color: var(--ad-text); cursor: pointer;
+  border: 1px solid var(--ad-edge); border-radius: 14px; background: var(--ad-card); box-shadow: 0 1px 2px rgba(16, 24, 48, .04);
+  transition: border-color .2s ease, box-shadow .25s ease, transform .25s var(--ad-ease);
+}
+.admin-shell .research-card:hover { border-color: rgba(43, 89, 255, .35); box-shadow: 0 14px 28px -20px rgba(16, 24, 48, .5); transform: translateY(-2px); }
+.admin-shell .research-card:focus-visible { outline: 2px solid var(--ad-cobalt); outline-offset: 2px; }
+.admin-shell .research-card img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 10px; background: #eef0f5; }
+.admin-shell .research-card strong { font-size: 13.5px; font-weight: 620; line-height: 1.35; }
+.admin-shell .stage-rejected .research-card { opacity: .62; }
+
+/* Drawer */
+.admin-shell .research-drawer-wrap { position: fixed; inset: 0; z-index: 1001; display: flex; justify-content: flex-end; }
+.admin-shell .research-backdrop { position: absolute; inset: 0; border: 0; padding: 0; background: rgba(8, 11, 24, .42); cursor: default; animation: research-fade .25s ease; }
+.admin-shell .research-drawer {
+  position: relative; display: flex; flex-direction: column; width: min(620px, 100%); height: 100%; background: var(--ad-canvas);
+  box-shadow: -30px 0 60px -30px rgba(8, 11, 24, .5); animation: research-slide .35s var(--ad-ease); outline: none;
+}
+@keyframes research-fade { from { opacity: 0; } }
+@keyframes research-slide { from { transform: translateX(40px); opacity: 0; } }
+.admin-shell .research-drawer-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 24px 28px 18px; background: var(--ad-card); border-bottom: 1px solid var(--ad-edge); }
+.admin-shell .research-drawer-head h2 { margin: 6px 0 0; font-size: 22px; font-weight: 650; letter-spacing: -.03em; line-height: 1.2; }
+.admin-shell .research-icon-button { display: inline-grid; place-items: center; width: 34px; height: 34px; flex: none; border: 1px solid var(--ad-edge); border-radius: 10px; background: var(--ad-card); color: var(--ad-soft); cursor: pointer; }
+.admin-shell .research-icon-button:hover { color: var(--ad-text); border-color: rgba(43, 89, 255, .35); }
+.admin-shell .research-drawer-body { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 22px 28px 30px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; }
+.admin-shell .research-drawer :is(input, select, textarea) { box-sizing: border-box; max-width: 100%; min-width: 0; }
+.admin-shell .research-drawer-body label { margin-bottom: 14px; }
+.admin-shell .research-drawer-body input, .admin-shell .research-drawer-body select, .admin-shell .research-drawer-body textarea { border-radius: 10px; }
+.admin-shell .research-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
+.admin-shell .research-block { padding: 20px 20px 8px; border: 1px solid var(--ad-edge); border-radius: 16px; background: var(--ad-card); }
+.admin-shell .research-block h3 { margin: 0 0 14px; font-size: 14px; font-weight: 640; letter-spacing: -.01em; }
+.admin-shell .research-block-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+.admin-shell .research-block-head h3 { margin: 0; }
+.admin-shell .research-block > .field-help, .admin-shell .research-block > .quiet-link { margin-bottom: 14px; }
+.admin-shell .research-economics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 2px 0 14px; }
+.admin-shell .research-economics div { padding: 12px 14px; border-radius: 12px; background: #f6f7fb; }
+.admin-shell .research-economics dt { font-size: 11px; color: var(--ad-soft); }
+.admin-shell .research-economics dd { margin: 4px 0 0; font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
+.admin-shell .research-economics dd small { font-size: 12px; font-weight: 600; margin-left: 4px; opacity: .8; }
+.admin-shell .research-economics .good { background: #e6f6ee; color: #11683f; }
+.admin-shell .research-economics .bad { background: #fdecee; color: #a62434; }
+.admin-shell .research-picks, .admin-shell .research-ads { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.admin-shell .research-picks li, .admin-shell .research-ads li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: #f6f7fb; font-size: 12.5px; }
+.admin-shell .research-picks li > span { flex: 1; min-width: 0; font-weight: 560; }
+.admin-shell .research-picks small { display: block; color: var(--ad-soft); font-weight: 450; margin-top: 2px; }
+.admin-shell .research-ads li a { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; color: var(--ad-cobalt-deep); text-decoration: none; white-space: nowrap; }
+.admin-shell .research-ads li span { flex: 1; min-width: 0; color: var(--ad-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-shell .research-ads .research-icon-button { width: 28px; height: 28px; }
+.admin-shell .research-add-ad { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; gap: 8px; margin-bottom: 14px; }
+.admin-shell .research-add-ad input { margin: 0; }
+.admin-shell .research-next { background: linear-gradient(180deg, #fff 0%, #f7f9ff 100%); border-color: rgba(43, 89, 255, .18); }
+.admin-shell .research-store-create { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 12px; }
+.admin-shell .research-store-create label { flex: 1; margin: 0; }
+.admin-shell .research-prefix { display: flex; align-items: center; margin-top: 8px; border: 1px solid #d5dbe7; border-radius: 10px; background: #fff; overflow: hidden; }
+.admin-shell .research-prefix > span { padding: 0 4px 0 12px; color: var(--ad-soft); font-size: 13px; }
+.admin-shell .research-prefix input { margin: 0; border: 0; box-shadow: none; padding-left: 2px; }
+.admin-shell .research-store-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 12px; }
+.admin-shell .research-store-links p { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--ad-soft); }
+.admin-shell .research-drawer-foot { display: flex; align-items: center; gap: 12px; padding: 16px 28px; background: var(--ad-card); border-top: 1px solid var(--ad-edge); }
+.admin-shell .research-drawer-foot .button { margin-left: auto; }
+.admin-shell .research-drawer-foot .form-error, .admin-shell .research-drawer-foot .save-success { margin: 0; padding: 6px 10px; font-size: 12px; }
+.admin-shell .research-delete { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: #a62434; font: inherit; font-size: 13px; font-weight: 560; cursor: pointer; padding: 8px 4px; }
+.admin-shell .research-delete:hover { text-decoration: underline; }
+
+@media (max-width: 700px) {
+  .admin-shell .research-tabs, .admin-shell .research-search, .admin-shell .research-manual { padding-left: 18px; padding-right: 18px; }
+  .admin-shell .research-results { padding: 18px 18px 0; grid-template-columns: minmax(0, 1fr); }
+  .admin-shell .research-finder { padding-bottom: 20px; }
+  .admin-shell .research-note, .admin-shell .research-elsewhere, .admin-shell .research-finder .form-error { margin-left: 18px; margin-right: 18px; }
+  .admin-shell .research-board { grid-template-columns: repeat(6, minmax(250px, 82vw)); }
+  .admin-shell .research-drawer-head, .admin-shell .research-drawer-body, .admin-shell .research-drawer-foot { padding-left: 18px; padding-right: 18px; }
+  .admin-shell .research-two, .admin-shell .research-economics { grid-template-columns: minmax(0, 1fr); }
+  .admin-shell .research-add-ad { grid-template-columns: minmax(0, 1fr) auto; }
+  .admin-shell .research-add-ad input[type="url"] { grid-column: 1 / -1; }
+  .admin-shell .research-store-create { flex-direction: column; align-items: stretch; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell .research-drawer, .admin-shell .research-backdrop { animation: none; }
+  .admin-shell .research-card, .admin-shell .research-ad, .admin-shell .research-cj { transition: none; }
+}
+
+/* The delete confirmation opens over the drawer, which sits above the environment banner. */
+.research-confirm { z-index: 1011; }
+[data-slot="alert-dialog-overlay"]:has(~ .research-confirm) { z-index: 1010; }
