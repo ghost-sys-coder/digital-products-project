@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { ArrowLeft, ArrowUpRight, Check, CreditCard, Download, Eye, Mail, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Check, CreditCard, Download, Eye, Mail, ShieldCheck } from "lucide-react";
 import { getDigitalPage, getStore, listProducts } from "@/lib/catalog";
 import { relatedProducts } from "@/lib/related-products";
 import type { CatalogProduct } from "@/lib/catalog.types";
@@ -12,7 +12,7 @@ import { CheckoutButton } from "@/components/checkout-button";
 import { Monogram } from "@/components/site/monogram";
 import { PageEffects } from "@/components/site/page-effects";
 import { StickyBuy } from "@/components/site/sticky-buy";
-import { SiteFooter, SiteHeader, SUPPORT_FALLBACK, coverSrc, shortName } from "@/components/site/chrome";
+import { SUPPORT_FALLBACK, coverSrc, shortName } from "@/components/site/chrome";
 import { monaSans } from "../../studio-fonts";
 import "../../studio.css";
 
@@ -38,6 +38,9 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
 
 const ROOT_ID = "vc-product";
 
+// No site navigation or full footer here: a buyer who lands on a product (often from an ad) sees only that
+// product, its chosen suggestions and the privacy policy.
+
 export default async function ProductPage(props: Params) {
   const { product, query } = await load(props);
   const draft = product?.status !== "published";
@@ -54,8 +57,6 @@ export default async function ProductPage(props: Params) {
   return (
     <div id={ROOT_ID} className={`vc vc-pd-page ${monaSans.variable}`}>
       <PageEffects rootId={ROOT_ID} />
-      <span className="vc-sentinel" data-top-sentinel aria-hidden="true" />
-      <SiteHeader base="/" cta={false} />
 
       <main className="vc-wrap vc-pd">
         {draft && (
@@ -65,7 +66,6 @@ export default async function ProductPage(props: Params) {
             <Link href={`/admin/products/${encodeURIComponent(product.id)}`}>Back to the editor</Link>
           </div>
         )}
-        <Link className="vc-back" href="/#collection"><ArrowLeft size={16} aria-hidden="true" /> The collection</Link>
         <div className="vc-pd-grid">
           <div className="vc-pd-visual">
             <div className="vc-pd-stage">
@@ -131,7 +131,10 @@ export default async function ProductPage(props: Params) {
         </section>
       )}
 
-      <SiteFooter store={store} products={products} support={support} base="/" />
+      <footer className="vc-pd-foot vc-wrap">
+        <span>© {new Date().getFullYear()} {store.name}</span>
+        <Link href="/privacy">Privacy policy</Link>
+      </footer>
       {!draft && (
         <StickyBuy targetId="buy">
           <div className="vc-buybar-info"><strong>{shortName(product)}</strong><span>{price}</span></div>
