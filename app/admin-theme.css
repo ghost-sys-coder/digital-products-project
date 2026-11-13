@@ -1,0 +1,217 @@
+/* The studio workspace theme (components/admin-shell.tsx, components/dashboard-view.tsx).
+   An ink sidebar, a cool canvas with a cobalt glow, and raised white surfaces in Mona Sans, so the admin
+   matches the storefront. Rules are scoped under .admin-shell to sit above the shared rules in globals.css;
+   the sidebar's narrow layouts are restated here for the same reason. */
+
+.admin-shell {
+  --ad-ink: #0b0f1c;
+  --ad-ink-2: #141a31;
+  --ad-canvas: #f2f4f8;
+  --ad-card: #fff;
+  --ad-edge: rgba(16, 24, 48, .08);
+  --ad-text: #0d1220;
+  --ad-soft: #5a6172;
+  --ad-cobalt: #2b59ff;
+  --ad-cobalt-deep: #1c3fd6;
+  --ad-wash: #e9eeff;
+  --ad-shadow: 0 1px 2px rgba(16, 24, 48, .04), 0 14px 34px -22px rgba(16, 24, 48, .28);
+  --ad-ease: cubic-bezier(.16, 1, .3, 1);
+  font-family: var(--font-mona), system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--ad-text);
+  background: var(--ad-canvas);
+}
+
+/* Sidebar */
+.admin-shell .admin-sidebar {
+  border-right: 0; color: #fff; padding: 26px 16px 22px; isolation: isolate; overflow: hidden;
+  background:
+    radial-gradient(120% 45% at 0% 100%, rgba(43, 89, 255, .34) 0%, rgba(43, 89, 255, 0) 62%),
+    linear-gradient(180deg, var(--ad-ink-2) 0%, var(--ad-ink) 42%);
+}
+.admin-shell .admin-sidebar .brand { color: #fff; font-size: 15px; margin: 0 6px 40px; letter-spacing: -.02em; }
+.admin-shell .admin-sidebar .brand-mark { border-radius: 9px; box-shadow: 0 8px 22px -8px rgba(43, 89, 255, .9); }
+.admin-shell .sidebar-label { color: rgba(214, 222, 255, .42); font-size: 10px; letter-spacing: .16em; margin: 0 12px 12px; }
+.admin-shell .admin-sidebar nav { gap: 4px; }
+.admin-shell .admin-sidebar nav a {
+  padding: 11px 12px; border-radius: 12px; color: rgba(222, 228, 255, .66); font-size: 13.5px; font-weight: 500;
+  transition: background .2s ease, color .2s ease, box-shadow .3s ease;
+}
+.admin-shell .admin-sidebar nav a:hover { background: rgba(255, 255, 255, .06); color: #fff; }
+.admin-shell .admin-sidebar nav a.active {
+  color: #fff; font-weight: 600;
+  background: linear-gradient(180deg, #3a66ff 0%, var(--ad-cobalt) 100%);
+  box-shadow: 0 12px 26px -12px rgba(43, 89, 255, .95), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+.admin-shell .admin-sidebar nav a:focus-visible { outline: 2px solid #9db2ff; outline-offset: 2px; }
+.admin-shell .sidebar-bottom > a, .admin-shell .sidebar-bottom button { color: rgba(222, 228, 255, .6); font-size: 12.5px; }
+.admin-shell .sidebar-bottom > a:hover, .admin-shell .sidebar-bottom .sidebar-signout:hover { color: #fff; }
+.admin-shell .sidebar-footnote { color: rgba(214, 222, 255, .34); border-top-color: rgba(255, 255, 255, .08); font-size: 10px; }
+
+/* Canvas and top bar */
+.admin-shell .admin-main {
+  background:
+    radial-gradient(900px 420px at 92% -6%, rgba(43, 89, 255, .11) 0%, rgba(43, 89, 255, 0) 70%),
+    radial-gradient(700px 360px at 20% -10%, rgba(120, 150, 255, .08) 0%, rgba(120, 150, 255, 0) 70%),
+    var(--ad-canvas);
+}
+.admin-shell .admin-topbar { position: sticky; top: 0; z-index: 20; height: 64px; background: rgba(242, 244, 248, .94); border-bottom: 1px solid var(--ad-edge); color: var(--ad-soft); font-size: 12px; }
+.admin-shell .admin-topbar > span { font-weight: 550; letter-spacing: .01em; }
+.admin-shell .admin-topbar a { color: var(--ad-soft); transition: color .2s ease; }
+.admin-shell .admin-topbar a:hover { color: var(--ad-cobalt); }
+.admin-shell .admin-content { padding-top: 40px; }
+
+/* Headings */
+.admin-shell .eyebrow { color: var(--ad-cobalt); font-size: 10.5px; letter-spacing: .16em; font-weight: 650; }
+.admin-shell .admin-page-heading { margin-bottom: 30px; }
+.admin-shell .admin-page-heading h1 { font-size: clamp(30px, 3vw, 40px); font-weight: 650; font-stretch: 110%; letter-spacing: -.045em; color: var(--ad-text); margin: 10px 0 8px; }
+.admin-shell .admin-page-heading p { color: var(--ad-soft); font-size: 14px; }
+
+/* Buttons */
+.admin-shell .button { border-radius: 12px; font-weight: 600; transition: background .2s ease, transform .2s var(--ad-ease), box-shadow .25s ease, border-color .2s ease; }
+.admin-shell .button.primary { background: linear-gradient(180deg, #3a66ff 0%, var(--ad-cobalt) 100%); box-shadow: 0 10px 24px -12px rgba(43, 89, 255, .9), inset 0 1px 0 rgba(255, 255, 255, .2); }
+.admin-shell .button.primary:hover:not(:disabled) { background: var(--ad-cobalt-deep); transform: translateY(-1px); }
+.admin-shell .button.secondary { background: var(--ad-card); border-color: var(--ad-edge); box-shadow: 0 1px 2px rgba(16, 24, 48, .05); }
+.admin-shell .button.secondary:hover:not(:disabled) { border-color: rgba(43, 89, 255, .35); background: #fbfcff; }
+.admin-shell .button:active:not(:disabled) { transform: translateY(1px); }
+
+/* Surfaces */
+.admin-shell .workspace-panel, .admin-shell .metric-grid { border: 1px solid var(--ad-edge); border-radius: 20px; background: var(--ad-card); box-shadow: var(--ad-shadow); overflow: hidden; }
+.admin-shell .panel-heading { padding: 22px 26px; border-bottom-color: var(--ad-edge); }
+.admin-shell .panel-heading h2 { font-size: 17px; font-weight: 640; letter-spacing: -.025em; }
+.admin-shell .panel-heading p { color: var(--ad-soft); font-size: 12px; }
+.admin-shell .quiet-link { color: var(--ad-soft); font-size: 12.5px; }
+.admin-shell .quiet-link:hover { color: var(--ad-cobalt); }
+.admin-shell .metric { border-right-color: var(--ad-edge); }
+.admin-shell .metric strong { font-weight: 650; }
+
+/* Tables and lists */
+.admin-shell .orders-table th { background: #f7f8fb; color: var(--ad-soft); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.admin-shell .orders-table td { border-top-color: var(--ad-edge); font-size: 12.5px; }
+.admin-shell .orders-table tbody tr { transition: background .2s ease; }
+.admin-shell .orders-table tbody tr:hover { background: #fafbff; }
+.admin-shell .catalog-row { border-bottom-color: var(--ad-edge); transition: background .2s ease; }
+.admin-shell .catalog-row:hover { background: #fafbff; }
+.admin-shell .catalog-icon { border-radius: 14px; background: var(--ad-wash); color: var(--ad-cobalt); }
+.admin-shell .catalog-name a { font-size: 14px; font-weight: 600; }
+.admin-shell .badge { border-radius: 999px; padding: 4px 10px 4px 8px; font-weight: 550; }
+.admin-shell .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .85; }
+.admin-shell .badge.published { color: #1c3fd6; background: var(--ad-wash); }
+.admin-shell .badge.draft, .admin-shell .badge.pending { color: #545c6e; background: #eef0f5; }
+.admin-shell .empty-state { padding: 56px 24px; }
+.admin-shell .empty-state > svg { color: var(--ad-cobalt); }
+.admin-shell .workspace-note { color: var(--ad-soft); font-size: 11px; }
+.admin-shell .workspace-note svg { color: var(--ad-cobalt); }
+.admin-shell .form-panel { border-radius: 20px; }
+.admin-shell .step-number { border-radius: 10px; }
+.admin-shell .fulfil-tabs a { border-color: var(--ad-edge); padding: 8px 14px; font-weight: 550; transition: border-color .2s ease, color .2s ease; }
+.admin-shell .fulfil-tabs a:hover { color: var(--ad-text); border-color: rgba(43, 89, 255, .3); }
+.admin-shell .fulfil-tabs a.active { border-color: var(--ad-cobalt); background: var(--ad-cobalt); color: #fff; box-shadow: 0 8px 20px -10px rgba(43, 89, 255, .9); }
+.admin-shell .fulfil-tabs a.active span { background: rgba(255, 255, 255, .22); color: #fff; }
+
+/* Overview (components/dashboard-view.tsx) */
+.dash-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 20px; margin-bottom: 20px; }
+.dash-sales {
+  position: relative; display: flex; flex-direction: column; min-height: 330px; padding: 28px 30px 24px; overflow: hidden; isolation: isolate;
+  border-radius: 24px; color: #fff;
+  background:
+    radial-gradient(90% 80% at 100% 0%, rgba(255, 255, 255, .24) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(80% 90% at 0% 100%, #1531c0 0%, rgba(21, 49, 192, 0) 65%),
+    var(--ad-cobalt);
+  box-shadow: 0 26px 50px -28px rgba(28, 63, 214, .9);
+}
+.dash-sales-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.admin-shell .dash-sales h2 { margin: 0 0 10px; font-size: 13px; font-weight: 550; color: rgba(255, 255, 255, .78); letter-spacing: .01em; }
+.dash-sales-top strong { display: block; font-size: clamp(34px, 3.6vw, 48px); font-weight: 650; font-stretch: 110%; letter-spacing: -.04em; line-height: 1; overflow-wrap: anywhere; }
+.dash-sales-top > div > span { display: block; margin-top: 10px; font-size: 12px; color: rgba(255, 255, 255, .7); }
+.dash-sales-period { flex: none; text-align: right; padding: 10px 14px; border-radius: 14px; background: rgba(255, 255, 255, .12); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18); }
+.dash-sales-period span { display: block; font-size: 11px; color: rgba(255, 255, 255, .72); }
+.dash-sales-period b { display: block; margin-top: 2px; font-size: 18px; font-weight: 650; letter-spacing: -.02em; }
+.dash-chart { display: grid; grid-template-columns: repeat(14, minmax(0, 1fr)); align-items: end; gap: 6px; height: 130px; margin: auto 0 0; padding: 28px 0 0; list-style: none; }
+.dash-chart li { display: flex; align-items: flex-end; height: 100%; }
+.dash-bar { display: block; width: 100%; border-radius: 6px 6px 3px 3px; background: rgba(255, 255, 255, .92); transform-origin: bottom; transition: background .2s ease; }
+.dash-bar[data-empty] { background: rgba(255, 255, 255, .2); }
+.dash-chart li:hover .dash-bar { background: #fff; }
+.dash-chart li:hover .dash-bar[data-empty] { background: rgba(255, 255, 255, .35); }
+.dash-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.dash-chart-axis { display: flex; justify-content: space-between; margin-top: 10px; font-size: 11px; color: rgba(255, 255, 255, .62); }
+
+.dash-stats { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.admin-shell .dash-stat {
+  display: flex; align-items: center; gap: 16px; padding: 20px 22px; border: 1px solid var(--ad-edge); border-radius: 20px;
+  background: var(--ad-card); box-shadow: var(--ad-shadow); color: var(--ad-text); text-decoration: none;
+  transition: transform .3s var(--ad-ease), box-shadow .3s ease, border-color .2s ease;
+}
+.admin-shell .dash-stat:hover { transform: translateY(-2px); border-color: rgba(43, 89, 255, .25); box-shadow: 0 1px 2px rgba(16, 24, 48, .04), 0 20px 40px -22px rgba(16, 24, 48, .35); }
+.dash-stat-icon { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--ad-wash); color: var(--ad-cobalt); }
+.dash-stat > div { min-width: 0; }
+.dash-stat > div > span { display: block; font-size: 12.5px; color: var(--ad-soft); }
+.dash-stat strong { display: block; margin-top: 2px; font-size: 26px; font-weight: 650; letter-spacing: -.035em; line-height: 1.15; }
+.dash-stat strong small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--ad-soft); }
+.dash-stat-note { display: block; margin-top: 2px; font-size: 12px; color: #9a5a00; }
+.dash-stat-go { margin-left: auto; color: #a3aabb; transition: color .2s ease, transform .3s var(--ad-ease); }
+.admin-shell .dash-stat:hover .dash-stat-go { color: var(--ad-cobalt); transform: translate(2px, -2px); }
+.dash-stat.is-alert .dash-stat-icon { background: #fff1db; color: #b45309; }
+
+.dash-lower { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.admin-shell .dash-lower .workspace-panel { margin-bottom: 0; }
+.dash-actions {
+  display: grid; gap: 4px; padding: 22px 16px 16px; border-radius: 24px; color: #fff;
+  background: radial-gradient(100% 60% at 100% 0%, rgba(43, 89, 255, .3) 0%, rgba(43, 89, 255, 0) 70%), var(--ad-ink);
+  box-shadow: 0 26px 50px -30px rgba(11, 15, 28, .9);
+}
+.admin-shell .dash-actions h2 { margin: 0 10px 10px; font-size: 15px; font-weight: 640; letter-spacing: -.02em; color: #fff; }
+.admin-shell .dash-actions a {
+  display: flex; align-items: center; gap: 14px; padding: 13px 12px; border-radius: 14px; color: #fff; text-decoration: none;
+  transition: background .2s ease;
+}
+.admin-shell .dash-actions a:hover { background: rgba(255, 255, 255, .07); }
+.dash-actions a > svg:first-child { flex: none; width: 38px; height: 38px; padding: 9px; border-radius: 12px; background: rgba(255, 255, 255, .08); color: #9db2ff; }
+.dash-actions a > span { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; }
+.dash-actions small { display: block; margin-top: 2px; font-size: 11.5px; font-weight: 400; color: rgba(222, 228, 255, .55); }
+.dash-actions a > svg:last-child { color: rgba(222, 228, 255, .45); transition: transform .3s var(--ad-ease), color .2s ease; }
+.admin-shell .dash-actions a:hover > svg:last-child { color: #fff; transform: translateX(3px); }
+.admin-shell .dash .workspace-note { margin-top: 22px; }
+
+/* Sign-in page: the art panel takes the brand cobalt */
+.login-art { background: radial-gradient(90% 70% at 100% 0%, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 60%), linear-gradient(160deg, #2b59ff 0%, #1a3ad0 100%); color: #fff; border-radius: 24px; }
+.login-art p { color: #fff; }
+
+/* Arrival: the page settles in, top to bottom */
+@media (prefers-reduced-motion: no-preference) {
+  .admin-shell .admin-content > *, .admin-shell .dash > * { animation: ad-rise .7s var(--ad-ease) both; }
+  .admin-shell .admin-content > :nth-child(2), .admin-shell .dash > :nth-child(2) { animation-delay: .06s; }
+  .admin-shell .admin-content > :nth-child(3), .admin-shell .dash > :nth-child(3) { animation-delay: .12s; }
+  .admin-shell .admin-content > :nth-child(n + 4), .admin-shell .dash > :nth-child(n + 4) { animation-delay: .18s; }
+  .dash-bar { animation: ad-grow .9s var(--ad-ease) .25s both; }
+}
+@keyframes ad-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes ad-grow { from { transform: scaleY(0); } to { transform: none; } }
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .admin-shell .admin-topbar { background: rgba(242, 244, 248, .72); -webkit-backdrop-filter: saturate(180%) blur(16px); backdrop-filter: saturate(180%) blur(16px); }
+}
+
+/* Narrower screens: the sidebar layouts from globals.css, restated over the rules above */
+@media (max-width: 1100px) {
+  .dash-grid, .dash-lower { grid-template-columns: minmax(0, 1fr); }
+  .dash-stats { grid-template-rows: none; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 850px) {
+  .admin-shell .admin-sidebar { padding: 22px 12px; }
+  .admin-shell .admin-sidebar .brand { margin: 0 auto 32px; }
+  .admin-shell .admin-sidebar nav a { justify-content: center; padding: 12px; font-size: 0; }
+  .admin-shell .sidebar-bottom > a, .admin-shell .sidebar-bottom button { font-size: 0; }
+  .dash-stats { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .admin-shell .admin-sidebar { padding: 14px 14px 10px; }
+  .admin-shell .admin-sidebar .brand { margin: 0 0 14px; }
+  .admin-shell .admin-sidebar nav a { flex-direction: column; gap: 5px; padding: 10px 4px; font-size: 10px; }
+  .admin-shell .sidebar-bottom > a, .admin-shell .sidebar-bottom button { font-size: 10px; }
+  .admin-shell .admin-topbar { display: flex; }
+  .admin-shell .admin-content { padding-top: 26px; }
+  .dash-sales { min-height: 290px; padding: 22px 20px 18px; border-radius: 20px; }
+  .dash-sales-top { flex-direction: column; }
+  .dash-sales-period { text-align: left; }
+  .dash-chart { gap: 4px; height: 110px; }
+}
