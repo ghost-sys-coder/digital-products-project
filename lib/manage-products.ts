@@ -13,6 +13,7 @@ import { assertDownloadAvailable } from "./product-files";
 import { paymentContext } from "./payment-connections";
 import { syncConnectedProduct } from "./connected-stripe-products";
 import { inspectProductFile, resolveProductUpload, validateUploadSize } from "./product-uploads";
+import { knownRelatedIds } from "./related-products";
 
 export async function uploadProductFile(productId: string, file: File, cover: boolean) {
   const { extension, contentType, filename } = await inspectProductFile(file, file.name, cover ? "cover" : "download");
@@ -64,6 +65,7 @@ export async function saveProduct(form: FormData) {
     product = data;
   }
   if (product.revision !== input.revision) throw new HttpError(409, "This product changed in another tab. Reload before saving.");
+  const related_ids = input.related_ids && await knownRelatedIds(input.related_ids, product.id);
   let storage_path = product.storage_path;
   let download_filename = product.download_filename;
   let cover_path = product.cover_path;
@@ -110,6 +112,7 @@ export async function saveProduct(form: FormData) {
     name: input.name, slug: input.slug, tagline: input.tagline, description: input.description, includes: input.includes,
     price_amount: input.price_amount, currency: input.currency, status: input.status, sort_order: input.sort_order,
     templates_url, storage_path, download_filename, cover_path, cover_type, ...payment,
+    ...(related_ids ? { related_ids } : {}),
     revision: input.revision + 1, updated_at: new Date().toISOString(),
   }).eq("id", product.id).eq("store_id", STORE_ID).eq("revision", input.revision).select("*").maybeSingle();
   if (error) throw new HttpError(error.code === "23505" ? 409 : 500, error.code === "23505" ? "That URL slug is already in use." : "Could not save the product. Please retry.");

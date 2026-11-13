@@ -3,6 +3,7 @@ import { getSupabase } from "./supabase";
 import { STORE_ID } from "./store-config";
 import type { CatalogProduct, DeliveryProduct, ProductKind } from "./catalog.types";
 import { getProduct } from "./products";
+import { ownerUser } from "./auth";
 
 export async function getStore() {
   const { data, error } = await getSupabase().from("stores").select("*").eq("id", STORE_ID).single();
@@ -26,6 +27,18 @@ export async function getCatalogProduct(id: string) {
 export async function getPublicProduct(slug: string, kind: ProductKind = "digital") {
   const { data, error } = await getSupabase().from("products").select("*")
     .eq("store_id", STORE_ID).eq("slug", slug).eq("status", "published").eq("kind", kind).maybeSingle();
+  if (error) throw new Error("Could not load product");
+  return data;
+}
+/**
+ * The digital product /p/<slug> shows: the published one, or with `preview` and the owner signed in, a draft
+ * too, so the admin's "Preview page" works before launch. Everyone else gets null for a draft.
+ */
+export async function getDigitalPage(slug: string, preview: boolean) {
+  const published = await getPublicProduct(slug);
+  if (published || !preview || !await ownerUser()) return published;
+  const { data, error } = await getSupabase().from("products").select("*")
+    .eq("store_id", STORE_ID).eq("slug", slug).eq("kind", "digital").maybeSingle();
   if (error) throw new Error("Could not load product");
   return data;
 }

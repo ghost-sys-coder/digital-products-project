@@ -25,6 +25,8 @@ export type CatalogProduct = {
   page: Record<string, unknown> | null; shipping_profile_id: string | null;
   /** Policy settings for physical stores; see lib/store-policies.ts. */
   policies?: Record<string, unknown>;
+  /** Digital products suggested under this one's page, in order (lib/related-products.ts). */
+  related_ids?: string[];
 };
 export type ProductVariant = {
   id: string; store_id: string; product_id: string; position: number;
