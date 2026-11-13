@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, Loader2, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { slugify } from "@/lib/store-input";
 import {
   daysSince, STAGE_LABELS, STAGES, unitEconomics,
@@ -36,14 +37,18 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
   const [cjHits, setCjHits] = useState<CjProduct[] | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; failed: boolean } | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const panel = useRef<HTMLElement>(null);
+  const keepRef = useRef<HTMLButtonElement>(null);
+  const deleteRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     panel.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    // Escape closes the drawer, unless the delete confirmation is open: then it closes only that.
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && !confirming) onClose(); };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, confirming]);
 
   /** The fields as the server expects them; throws a readable message for bad amounts. */
   function fields() {
@@ -83,10 +88,10 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
     const { productId } = await researchApi<{ productId: string }>({ action: "create-store", id: item.id, slug });
     router.push(`/admin/products/${productId}#product`);
   });
-  const remove = () => {
-    if (!window.confirm(`Delete “${item.title}” from the board?${item.store ? " Its store stays under Products." : ""}`)) return;
-    void run("delete", async () => { await researchApi({ action: "delete", id: item.id }); onDeleted(item.id); });
-  };
+  const remove = () => run("delete", async () => {
+    try { await researchApi({ action: "delete", id: item.id }); } catch (failure) { setConfirming(false); throw failure; }
+    onDeleted(item.id);
+  });
   function addAd(event: React.FormEvent) {
     event.preventDefault();
     if (!newAd.url.trim()) return;
@@ -187,10 +192,26 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
       </div>
 
       <footer className="research-drawer-foot">
-        <button type="button" className="research-delete" onClick={remove} disabled={!!pending}><Trash2 size={15} /> Delete</button>
+        <button ref={deleteRef} type="button" className="research-delete" onClick={() => setConfirming(true)} disabled={!!pending}><Trash2 size={15} /> Delete</button>
         {message && <p role="status" className={message.failed ? "form-error" : "save-success"}>{message.text}</p>}
         <button type="button" className="button primary" onClick={save} disabled={!!pending || !title.trim()}>{pending === "save" ? "Saving…" : "Save changes"}</button>
       </footer>
     </aside>
+
+    <AlertDialog open={confirming} onOpenChange={(next) => { if (pending !== "delete") setConfirming(next); }}>
+      <AlertDialogContent className="confirm-dialog research-confirm" initialFocus={keepRef} finalFocus={deleteRef}>
+        <div className="confirm-dialog-icon danger" aria-hidden="true"><Trash2 size={22} /></div>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete “{item.title}”?</AlertDialogTitle>
+          <AlertDialogDescription>
+            It comes off the board with its ads, supplier details and notes. This can&apos;t be undone.{item.store ? " Its store isn't deleted: it stays under Products." : ""}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel ref={keepRef} className="button secondary" disabled={pending === "delete"}>Keep it</AlertDialogCancel>
+          <AlertDialogAction type="button" className="button danger" disabled={pending === "delete"} onClick={remove}><Trash2 size={15} />{pending === "delete" ? "Deleting…" : "Delete idea"}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>, host);
 }

@@ -17,6 +17,7 @@
 .admin-shell .research-tabs button:hover { color: var(--ad-text); }
 .admin-shell .research-tabs button.active { background: var(--ad-ink); border-color: var(--ad-ink); color: #fff; }
 .admin-shell .research-search, .admin-shell .research-manual { display: flex; gap: 10px; align-items: flex-end; padding: 16px 26px 4px; flex-wrap: wrap; }
+.admin-shell .research-finder { padding-bottom: 26px; }
 .admin-shell .research-search-field { position: relative; flex: 1 1 320px; margin: 0; }
 .admin-shell .research-search-field svg { position: absolute; left: 14px; top: 50%; translate: 0 -50%; color: var(--ad-soft); pointer-events: none; }
 .admin-shell .research-search-field input { margin: 0; padding-left: 40px; height: 46px; border-radius: 12px; font-size: 14px; }
@@ -28,7 +29,7 @@
 .admin-shell .research-elsewhere { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 14px 26px 0; font-size: 12.5px; color: var(--ad-soft); }
 .admin-shell .research-elsewhere a { display: inline-flex; align-items: center; gap: 3px; color: var(--ad-cobalt-deep); font-weight: 560; text-decoration: none; }
 .admin-shell .research-elsewhere a:hover { text-decoration: underline; }
-.admin-shell .research-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; padding: 20px 26px 26px; }
+.admin-shell .research-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; padding: 20px 26px 0; }
 .admin-shell .research-ad, .admin-shell .research-cj {
   display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--ad-edge); border-radius: 16px; background: #fbfcfe;
   transition: border-color .2s ease, box-shadow .25s ease, transform .25s var(--ad-ease);
@@ -126,7 +127,8 @@
 
 @media (max-width: 700px) {
   .admin-shell .research-tabs, .admin-shell .research-search, .admin-shell .research-manual { padding-left: 18px; padding-right: 18px; }
-  .admin-shell .research-results { padding: 18px; grid-template-columns: minmax(0, 1fr); }
+  .admin-shell .research-results { padding: 18px 18px 0; grid-template-columns: minmax(0, 1fr); }
+  .admin-shell .research-finder { padding-bottom: 20px; }
   .admin-shell .research-note, .admin-shell .research-elsewhere, .admin-shell .research-finder .form-error { margin-left: 18px; margin-right: 18px; }
   .admin-shell .research-board { grid-template-columns: repeat(6, minmax(250px, 82vw)); }
   .admin-shell .research-drawer-head, .admin-shell .research-drawer-body, .admin-shell .research-drawer-foot { padding-left: 18px; padding-right: 18px; }
@@ -139,3 +141,7 @@
   .admin-shell .research-drawer, .admin-shell .research-backdrop { animation: none; }
   .admin-shell .research-card, .admin-shell .research-ad, .admin-shell .research-cj { transition: none; }
 }
+
+/* The delete confirmation opens over the drawer, which sits above the environment banner. */
+.research-confirm { z-index: 1011; }
+[data-slot="alert-dialog-overlay"]:has(~ .research-confirm) { z-index: 1010; }
