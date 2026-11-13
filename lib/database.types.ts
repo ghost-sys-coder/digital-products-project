@@ -1,7 +1,9 @@
 import type { CatalogProduct, Checkout, Store, DeliveryProduct, PhysicalSnapshot, ShippingAddress } from "./catalog.types";
 import type { PaymentConnection, PaymentOAuthAttempt, ProductPaymentRef } from "./payment.types";
 import type { RateInput, VariantInput } from "./store-input";
+import type { ResearchProduct } from "./research.types";
 // Mirrors the migrations. Keep these types with the schema.
+export type IntegrationToken = { provider: "cj"; access_token: string; expires_at: string; updated_at: string };
 export type Order = {
   id: string;
   stripe_session_id: string;
@@ -53,6 +55,13 @@ export type Database = {
       payment_connections: { Row: PaymentConnection; Insert: Partial<PaymentConnection> & Pick<PaymentConnection, "store_id" | "provider" | "external_account_id" | "livemode" | "status">; Update: Partial<PaymentConnection>; Relationships: [] };
       payment_oauth_attempts: { Row: PaymentOAuthAttempt; Insert: PaymentOAuthAttempt; Update: Partial<PaymentOAuthAttempt>; Relationships: [] };
       product_payment_refs: { Row: ProductPaymentRef; Insert: ProductPaymentRef; Update: Partial<ProductPaymentRef>; Relationships: [] };
+      research_products: {
+        Row: ResearchProduct & { store_id: string };
+        Insert: Pick<ResearchProduct, "title"> & Partial<ResearchProduct> & { store_id: string };
+        Update: Partial<ResearchProduct>;
+        Relationships: [];
+      };
+      integration_tokens: { Row: IntegrationToken; Insert: Omit<IntegrationToken, "updated_at"> & { updated_at?: string }; Update: Partial<IntegrationToken>; Relationships: [] };
       stores: { Row: Store; Insert: Store; Update: Partial<Store>; Relationships: [] };
       products: { Row: CatalogProduct; Insert: Pick<CatalogProduct, "id" | "store_id" | "slug" | "name"> & Partial<CatalogProduct>; Update: Partial<CatalogProduct>; Relationships: [] };
       checkouts: { Row: Checkout; Insert: Omit<Checkout, "created_at"> & { created_at?: string }; Update: Partial<Checkout>; Relationships: [] };

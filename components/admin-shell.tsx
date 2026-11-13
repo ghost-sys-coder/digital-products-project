@@ -1,12 +1,12 @@
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
-import { LayoutDashboard, Package, Receipt, Settings, ArrowUpRight, Truck } from "lucide-react";
+import { LayoutDashboard, Package, Radar, Receipt, Settings, ArrowUpRight, Truck } from "lucide-react";
 import { Brand } from "./store";
 import { AdminProfileMenu, SignOutButton } from "./admin-account-menu";
 import { ownerProfile } from "@/lib/owner-profile";
 import { monaSans } from "@/app/studio-fonts";
 
-const links = [{ href: "/admin", label: "Overview", Icon: LayoutDashboard }, { href: "/admin/products", label: "Products", Icon: Package }, { href: "/admin/orders", label: "Orders", Icon: Receipt }, { href: "/admin/fulfillment", label: "Fulfilment", Icon: Truck }, { href: "/admin/settings", label: "Store settings", Icon: Settings }];
+const links = [{ href: "/admin", label: "Overview", Icon: LayoutDashboard }, { href: "/admin/research", label: "Research", Icon: Radar }, { href: "/admin/products", label: "Products", Icon: Package }, { href: "/admin/orders", label: "Orders", Icon: Receipt }, { href: "/admin/fulfillment", label: "Fulfilment", Icon: Truck }, { href: "/admin/settings", label: "Store settings", Icon: Settings }];
 export function AdminShell({ children, active, storeName = "VeilCode Studio", owner }: {
   children: React.ReactNode;
   active: string;
