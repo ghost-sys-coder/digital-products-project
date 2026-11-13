@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { CatalogProduct, Store } from "@/lib/catalog.types";
 import { formatMoney } from "@/lib/store-config";
+import { LEGAL_KINDS, LEGAL_TITLES } from "@/lib/site-legal";
 import { Monogram } from "./monogram";
 
 // The studio's shared page furniture: header, footer and product tile, used by the homepage and product pages.
@@ -60,6 +61,10 @@ export function SiteFooter({ store, products, support, base = "" }: { store: Sto
               {store.website_url && <a href={store.website_url} target="_blank" rel="noopener noreferrer">veilcode.studio</a>}
               <a href={`mailto:${support}`}>Support</a>
               <Link href="/admin">Studio login</Link>
+            </div>
+            <div>
+              <h3>Legal</h3>
+              {LEGAL_KINDS.map((kind) => <Link key={kind} href={`/${kind}`}>{LEGAL_TITLES[kind]}</Link>)}
             </div>
           </nav>
         </div>

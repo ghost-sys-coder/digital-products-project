@@ -451,3 +451,24 @@
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .vc-buybar { background: rgba(255, 255, 255, .82); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); }
 }
+
+/* Legal pages (/privacy, /terms, /refunds, /data-deletion): components/site/legal-page.tsx */
+.vc-legal { padding-top: 28px; }
+.vc-legal-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: clamp(40px, 6vw, 96px); align-items: start; }
+.vc-legal-nav { position: sticky; top: calc(var(--vc-top, 0px) + 112px); display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
+.vc .vc-legal-nav a { padding: 10px 16px; border-radius: 999px; font-size: 15px; font-weight: 550; color: var(--vc-muted); transition: background .2s ease, color .2s ease; }
+.vc .vc-legal-nav a:hover { color: var(--vc-ink); background: var(--vc-panel); }
+.vc .vc-legal-nav a[aria-current="page"] { color: var(--vc-cobalt-deep); background: var(--vc-cobalt-wash); }
+.vc-legal-doc { max-width: 46em; }
+.vc .vc-legal-doc .vc-eyebrow { margin-bottom: 18px; }
+.vc .vc-legal-intro { margin-top: 26px; font-size: clamp(18px, 1.4vw, 21px); line-height: 1.6; color: var(--vc-ink-soft); }
+.vc-legal-doc section { margin-top: 44px; padding-top: 30px; border-top: 1px solid var(--vc-line); }
+.vc .vc-legal-doc h2 { font-size: 22px; font-weight: 640; font-stretch: 108%; letter-spacing: -.025em; line-height: 1.25; color: var(--vc-ink); }
+.vc .vc-legal-doc section p { margin-top: 14px; font-size: 17px; line-height: 1.7; color: var(--vc-muted); }
+@media (max-width: 850px) {
+  .vc-legal-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .vc-legal-nav { position: static; flex-direction: row; flex-wrap: wrap; padding-top: 0; }
+  .vc .vc-legal-nav a { padding: 8px 14px; font-size: 14px; background: var(--vc-panel); }
+  .vc-legal-doc section { margin-top: 34px; padding-top: 24px; }
+  .vc .vc-legal-doc section p { font-size: 16px; }
+}
