@@ -26,11 +26,17 @@ export function oauthError(error: unknown) {
 
 export function resourceMetadataUrl() { return `${appOrigin()}/.well-known/oauth-protected-resource/api/mcp`; }
 
-/** 401 that tells MCP clients where to start signing in (RFC 9728). */
-export function unauthorized(description = "Connect this app to VeilCode Studio to continue.") {
-  return json({ error: "invalid_token", error_description: description }, 401, {
-    "WWW-Authenticate": `Bearer realm="VeilCode Studio", error="invalid_token", error_description="${description}", resource_metadata="${resourceMetadataUrl()}"`,
-  });
+/**
+ * 401 that tells MCP clients where to start signing in (RFC 9728). With no token at all, the challenge
+ * carries no error code (RFC 6750 §3.1), so clients read it as "sign in" rather than "bad token".
+ */
+export function unauthorized(tokenSent: boolean) {
+  const metadata = `resource_metadata="${resourceMetadataUrl()}"`;
+  return tokenSent
+    ? json({ error: "invalid_token", error_description: "The access token is invalid or expired." }, 401, {
+      "WWW-Authenticate": `Bearer error="invalid_token", error_description="The access token is invalid or expired.", ${metadata}`,
+    })
+    : json({ error: "unauthorized", error_description: "Connect this app to VeilCode Studio to continue." }, 401, { "WWW-Authenticate": `Bearer ${metadata}` });
 }
 
 export { protectedResourceMetadata };

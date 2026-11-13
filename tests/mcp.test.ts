@@ -132,7 +132,10 @@ describe("the MCP endpoint", () => {
   it("turns away callers without a valid token and says where to sign in", async () => {
     const response = await rpc(null, "tools/list");
     expect(response.status).toBe(401);
-    expect(response.headers.get("www-authenticate")).toContain(`resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/api/mcp"`);
+    expect(response.headers.get("www-authenticate")).toBe(`Bearer resource_metadata="${ORIGIN}/.well-known/oauth-protected-resource/api/mcp"`);
+    const wrong = await rpc("vcs_not-a-real-token-at-all-000000", "tools/list");
+    expect(wrong.status).toBe(401);
+    expect(wrong.headers.get("www-authenticate")).toMatch(/^Bearer error="invalid_token".*resource_metadata=/);
 
     const token = await connect();
     await revokeConnection(state.mcp_connections[0].id as string);
