@@ -7,7 +7,8 @@ import { monaSans } from "@/app/studio-fonts";
 import "./authorize.css";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Connect an assistant", robots: { index: false, follow: false } };
+// same-origin (not the site's no-referrer) so the Connect form posts with this site's Origin header.
+export const metadata: Metadata = { title: "Connect an assistant", robots: { index: false, follow: false }, referrer: "same-origin" };
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 const PASSED = ["client_id", "redirect_uri", "response_type", "state", "code_challenge", "code_challenge_method", "scope"] as const;

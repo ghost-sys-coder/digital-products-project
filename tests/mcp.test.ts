@@ -108,6 +108,14 @@ describe("assistant sign-in (OAuth 2.1)", () => {
     expect(new URL(approved.headers.get("location")!).searchParams.get("code")).toMatch(/^vcac_/);
     expect(state.mcp_connections[0]).toMatchObject({ name: "Claude", scopes: ["read", "research"] });
 
+    // A real browser form post under the site's no-referrer policy: Origin is "null", and the browser
+    // itself marks the request same-origin. A cross-site page can't fake that header.
+    const browserPost = (site: string) => authorizePost(new Request(`${ORIGIN}/api/oauth/authorize`, {
+      method: "POST", headers: { origin: "null", "sec-fetch-site": site, "Content-Type": "application/x-www-form-urlencoded" }, body,
+    }));
+    expect((await browserPost("same-origin")).status).toBe(303);
+    expect((await browserPost("cross-site")).status).toBe(403);
+
     body.set("decision", "deny");
     const denied = new URL((await post()).headers.get("location")!);
     expect(denied.searchParams.get("error")).toBe("access_denied");

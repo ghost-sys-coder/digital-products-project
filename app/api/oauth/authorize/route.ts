@@ -1,5 +1,5 @@
 import { requireOwner } from "@/lib/auth";
-import { apiError, sameOrigin } from "@/lib/http";
+import { apiError, sameOriginForm } from "@/lib/http";
 import { approveAuthorization, OAuthError, parseScopes, readAuthorizeRequest, redirectWith } from "@/lib/mcp/oauth";
 
 export const runtime = "nodejs";
@@ -9,7 +9,7 @@ const FIELDS = ["client_id", "redirect_uri", "response_type", "state", "code_cha
 /** The owner's answer on /oauth/authorize: back to the app with a code, or with access_denied. */
 export async function POST(req: Request) {
   try {
-    sameOrigin(req);
+    sameOriginForm(req);
     await requireOwner();
     const form = await req.formData();
     const params: Record<string, string | undefined> = {};
