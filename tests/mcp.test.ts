@@ -7,6 +7,8 @@ import type { McpScope } from "../lib/database.types";
 
 const jar = vi.hoisted(() => new Map<string, string>());
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: (name: string) => jar.has(name) ? { value: jar.get(name) } : undefined, set: vi.fn(), delete: vi.fn() }) }));
+// Every hostname resolves to a public address in Anthropic's published range; literal IPs are unaffected.
+vi.mock("node:dns/promises", () => ({ lookup: async () => [{ address: "160.79.104.10", family: 4 }] }));
 
 import { POST as mcpPost } from "../app/api/mcp/route";
 import { POST as tokenPost } from "../app/api/oauth/token/route";
@@ -94,6 +96,36 @@ describe("assistant sign-in (OAuth 2.1)", () => {
     expect(await exchangeToken(new URLSearchParams({ grant_type: "authorization_code", code: new URL(await approveAuthorization(request, ["read"])).searchParams.get("code")!, code_verifier: VERIFIER }), basic)).toMatchObject({ scope: "read" });
   });
 
+  it("signs Claude in with its published client details (CIMD), on any loopback port", async () => {
+    const CLAUDE = "https://claude.ai/oauth/claude-code-client-metadata";
+    const fetch = vi.fn(async () => Response.json({
+      client_id: CLAUDE, client_name: "Claude Code", redirect_uris: ["http://localhost/callback", "http://127.0.0.1/callback"],
+      grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], token_endpoint_auth_method: "none",
+    }));
+    vi.stubGlobal("fetch", fetch);
+    const params = { client_id: CLAUDE, redirect_uri: "http://localhost:3118/callback", response_type: "code", code_challenge: CHALLENGE, code_challenge_method: "S256", state: "c1" };
+    const request = await readAuthorizeRequest(params);
+    expect(request.client).toMatchObject({ client_id: CLAUDE, name: "Claude Code" });
+    expect(String((fetch.mock.calls[0] as unknown[])[0])).toBe(CLAUDE);
+    const code = new URL(await approveAuthorization(request, ["read"])).searchParams.get("code")!;
+    const tokens = await exchangeToken(new URLSearchParams({ grant_type: "authorization_code", code, client_id: CLAUDE, redirect_uri: "http://localhost:3118/callback", code_verifier: VERIFIER }), null);
+    expect(tokens).toMatchObject({ token_type: "Bearer", scope: "read" });
+    expect(state.mcp_connections[0]).toMatchObject({ name: "Claude Code", client_id: CLAUDE });
+
+    // The port can change; the path can't, and a non-loopback host never matches loosely.
+    await expect(readAuthorizeRequest({ ...params, redirect_uri: "http://localhost:9999/elsewhere" })).rejects.toThrow("return address");
+    await expect(readAuthorizeRequest({ ...params, redirect_uri: "http://evil.example:3118/callback" })).rejects.toThrow("return address");
+    // A document that doesn't name itself is refused.
+    fetch.mockImplementationOnce(async () => Response.json({ client_id: "https://other.example/doc", redirect_uris: ["http://localhost/callback"] }));
+    await expect(readAuthorizeRequest(params)).rejects.toThrow("don't match");
+  });
+
+  it("lets a registered desktop app come back on a new port", async () => {
+    const client = await registerClient({ client_name: "Codex", redirect_uris: ["http://127.0.0.1:55202/callback/abc"] });
+    const request = await readAuthorizeRequest({ client_id: client.client_id, redirect_uri: "http://127.0.0.1:50997/callback/abc", response_type: "code", code_challenge: CHALLENGE, code_challenge_method: "S256" });
+    expect(request.redirectUri).toBe("http://127.0.0.1:50997/callback/abc");
+  });
+
   it("asks the signed-in owner, over the store's own origin", async () => {
     const client = await registerClient({ client_name: "Claude", redirect_uris: [REDIRECT] });
     const body = new URLSearchParams({ client_id: client.client_id, redirect_uri: REDIRECT, response_type: "code", code_challenge: CHALLENGE, code_challenge_method: "S256", state: "s1", decision: "approve" });
@@ -124,7 +156,10 @@ describe("assistant sign-in (OAuth 2.1)", () => {
 
   it("publishes the metadata MCP clients discover, and the token and registration endpoints", async () => {
     expect(await resourceMetadata().json()).toMatchObject({ resource: `${ORIGIN}/api/mcp`, authorization_servers: [ORIGIN] });
-    expect(await serverMetadata().json()).toMatchObject({ authorization_endpoint: `${ORIGIN}/oauth/authorize`, code_challenge_methods_supported: ["S256"], registration_endpoint: `${ORIGIN}/api/oauth/register` });
+    expect(await serverMetadata().json()).toMatchObject({
+      authorization_endpoint: `${ORIGIN}/oauth/authorize`, code_challenge_methods_supported: ["S256"], registration_endpoint: `${ORIGIN}/api/oauth/register`,
+      client_id_metadata_document_supported: true, token_endpoint_auth_methods_supported: expect.arrayContaining(["none"]),
+    });
 
     const registered = await registerPost(new Request(`${ORIGIN}/api/oauth/register`, { method: "POST", body: JSON.stringify({ client_name: "Codex", redirect_uris: ["http://127.0.0.1:5555/cb"] }) }));
     expect(registered.status).toBe(201);
