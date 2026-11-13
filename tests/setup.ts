@@ -22,6 +22,10 @@ vi.mock("resend", async () => {
   const { sendEmail } = await import("./fakes");
   return { Resend: class { emails = { send: sendEmail }; } };
 });
+// next/font only works inside the Next compiler, so pages that load a font get a stand-in class name.
+vi.mock("next/font/google", () => ({
+  Mona_Sans: () => ({ className: "font-mona", variable: "font-mona", style: { fontFamily: "Mona Sans" } }),
+}));
 
 beforeEach(() => {
   // Default: a production deployment on Vercel that is still in Stripe test mode.

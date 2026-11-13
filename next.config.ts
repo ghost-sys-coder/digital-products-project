@@ -13,6 +13,9 @@ function storefrontImages(): NonNullable<NextConfig["images"]>["remotePatterns"]
 
 const nextConfig: NextConfig = {
   images: { remotePatterns: storefrontImages(), formats: ["image/avif", "image/webp"] },
+  // The homepage checks which lifestyle photos exist and the photo route serves them (lib/home-photos.ts),
+  // so both ship with the files.
+  outputFileTracingIncludes: { "/": ["./public/home/**/*"], "/api/home-photo/**": ["./public/home/**/*"] },
   experimental: {
     agentFeedback: true,
   },

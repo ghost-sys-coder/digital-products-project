@@ -59,6 +59,50 @@ export function publicOptions(variants: Pick<ProductVariant, "options">[]): Publ
     .map(([name, list]) => ({ name, values: list }));
 }
 
+/** A published physical store as the studio homepage lists it. */
+export type StoreCard = {
+  slug: string; name: string; tagline: string; brand: string; currency: string;
+  image: { url: string; alt: string } | null;
+  /** Lowest active variant price, in minor units. */
+  fromPrice: number;
+};
+
+/**
+ * Published stores for the homepage: brand, the first hero image and the lowest price. Stores whose page
+ * or brand fails validation, or that have nothing for sale, are left out rather than shown half-built.
+ */
+export async function listStoreCards(): Promise<StoreCard[]> {
+  const db = getSupabase();
+  const { data, error } = await db.from("products").select("*")
+    .eq("store_id", STORE_ID).eq("kind", "physical").eq("status", "published")
+    .order("sort_order").order("created_at", { ascending: false });
+  if (error) throw new Error("Could not load stores");
+  const products = (data ?? []) as CatalogProduct[];
+  if (!products.length) return [];
+  const { data: variants, error: variantError } = await db.from("product_variants").select("product_id, price_amount")
+    .eq("store_id", STORE_ID).eq("active", true);
+  if (variantError) throw new Error("Could not load stores");
+  const mediaBase = storefrontMediaBase();
+  return products.flatMap((product): StoreCard[] => {
+    const prices = ((variants ?? []) as Pick<ProductVariant, "product_id" | "price_amount">[])
+      .filter((variant) => variant.product_id === product.id).map((variant) => variant.price_amount);
+    if (!prices.length) return [];
+    try {
+      const page = parseStorePage(product.page, product.store_id, product.id);
+      const brand = parseBrand(product.brand, product.store_id, product.id);
+      const hero = page.sections.find((section) => section.type === "hero" && section.enabled);
+      const image = hero?.type === "hero" ? hero.data.media.find((item) => item.kind === "image") : undefined;
+      return [{
+        slug: product.slug, name: product.name, tagline: product.tagline, brand: brand.name || product.name,
+        currency: product.currency, fromPrice: Math.min(...prices),
+        image: image ? { url: mediaBase + image.path, alt: image.alt || product.name } : null,
+      }];
+    } catch {
+      return [];
+    }
+  });
+}
+
 export function storefrontMediaBase() {
   return `${getEnv().SUPABASE_URL.replace(/\/+$/, "")}/storage/v1/object/public/storefront/`;
 }

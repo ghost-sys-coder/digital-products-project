@@ -1,8 +1,12 @@
 "use client";
 import { useRef, useState } from "react";
-import { ArrowUpRight, LockKeyhole } from "lucide-react";
+import { ArrowRight, LockKeyhole } from "lucide-react";
 
-export function CheckoutButton({ productId, price }: { productId: string; price: string }) {
+/**
+ * Starts Stripe Checkout for a digital product. `compact` is the version in the phone buy bar:
+ * a shorter label and no note underneath. Styles: app/studio.css.
+ */
+export function CheckoutButton({ productId, price, compact = false }: { productId: string; price: string; compact?: boolean }) {
   const requestId = useRef<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -19,5 +23,13 @@ export function CheckoutButton({ productId, price }: { productId: string; price:
       window.location.assign(data.url);
     } catch (error) { setError((error as Error).message); setPending(false); }
   }
-  return <div className="checkout-control"><button type="button" className="button primary purchase-button" onClick={checkout} disabled={pending}>{pending ? "Opening checkout…" : `Get the kit · ${price}`}<ArrowUpRight size={19} /></button><span className="checkout-note"><LockKeyhole size={13} /> Secure payment with Stripe · Instant email delivery</span>{error && <p className="form-error" role="alert">{error}</p>}</div>;
+  return (
+    <div className={`vc-checkout${compact ? " is-compact" : ""}`}>
+      <button type="button" className="vc-button vc-buy-button" onClick={checkout} disabled={pending}>
+        {pending ? "Opening checkout…" : compact ? "Buy now" : `Buy now · ${price}`}<ArrowRight size={18} aria-hidden="true" />
+      </button>
+      {!compact && <span className="vc-checkout-note"><LockKeyhole size={14} aria-hidden="true" /> Secure payment with Stripe. Your download link arrives by email.</span>}
+      {error && <p className="vc-checkout-error" role="alert">{error}</p>}
+    </div>
+  );
 }
