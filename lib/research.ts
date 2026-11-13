@@ -4,13 +4,13 @@ import { getSupabase } from "./supabase";
 import { HttpError } from "./http";
 import { STORE_ID } from "./store-config";
 import { createStore } from "./manage-stores";
-import { STAGES, type ResearchAd, type ResearchCard, type ResearchProduct, type ResearchSupplier, type Stage } from "./research.types";
+import { RESEARCH_KINDS, STAGES, type ResearchAd, type ResearchKind, type ResearchCard, type ResearchProduct, type ResearchSupplier, type Stage } from "./research.types";
 
 // The product research board (/admin/research): product ideas, the ads that suggest they sell, a
 // supplier and its costs, and the draft store made from an idea. Every value is checked here before
 // it is written; the table constraints (supabase/migrations/*_product_research.sql) still apply.
 
-const COLUMNS = "id, title, stage, notes, image_url, ads, supplier, target_price, store_product_id, created_at, updated_at";
+const COLUMNS = "id, kind, title, stage, notes, image_url, ads, supplier, target_price, store_product_id, created_at, updated_at";
 const MAX_ADS = 20;
 const MAX_CENTS = 10_000_000;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -80,6 +80,10 @@ function parseSupplier(value: unknown): ResearchSupplier | null {
 export function parseResearchFields(raw: Record<string, unknown>, creating = false) {
   const fields: Partial<Omit<ResearchProduct, "id" | "created_at" | "updated_at" | "store_product_id">> = {};
   if (creating || "title" in raw) fields.title = text(raw.title, "Product name", 120, true);
+  if ("kind" in raw) {
+    if (!(RESEARCH_KINDS as readonly unknown[]).includes(raw.kind)) throw new HttpError(400, "Choose physical or digital.");
+    fields.kind = raw.kind as ResearchKind;
+  }
   if ("stage" in raw) {
     if (!(STAGES as readonly unknown[]).includes(raw.stage)) throw new HttpError(400, "Choose a stage from the board.");
     fields.stage = raw.stage as Stage;
@@ -109,20 +113,20 @@ export async function listResearch(): Promise<ResearchCard[]> {
   const supabase = getSupabase();
   const [ideas, stores] = await Promise.all([
     supabase.from("research_products").select(COLUMNS).eq("store_id", STORE_ID).order("updated_at", { ascending: false }).limit(500),
-    supabase.from("products").select("id, slug, status").eq("store_id", STORE_ID).eq("kind", "physical"),
+    supabase.from("products").select("id, slug, status, kind").eq("store_id", STORE_ID),
   ]);
   if (ideas.error || stores.error) throw new Error("Could not load the research board");
-  const byId = new Map((stores.data as { id: string; slug: string; status: string }[]).map((store) => [store.id, store]));
+  const byId = new Map((stores.data as { id: string; slug: string; status: string; kind: "digital" | "physical" }[]).map((store) => [store.id, store]));
   return (ideas.data as ResearchProduct[]).map((idea) => {
     const store = idea.store_product_id ? byId.get(idea.store_product_id) : undefined;
-    return { ...idea, store: store ? { slug: store.slug, status: store.status } : null };
+    return { ...idea, store: store ? { slug: store.slug, status: store.status, kind: store.kind } : null };
   });
 }
 
 export async function createResearch(raw: Record<string, unknown>) {
   const { title, ...fields } = parseResearchFields(raw, true);
   const { data, error } = await getSupabase().from("research_products")
-    .insert({ id: randomUUID(), store_id: STORE_ID, stage: "saved", notes: "", ads: [], supplier: null, image_url: null, target_price: null, ...fields, title: title! })
+    .insert({ id: randomUUID(), store_id: STORE_ID, kind: "physical", stage: "saved", notes: "", ads: [], supplier: null, image_url: null, target_price: null, ...fields, title: title! })
     .select(COLUMNS).single();
   if (error || !data) throw new HttpError(500, "Could not save that product idea. Please try again.");
   return data as ResearchProduct;
@@ -151,6 +155,7 @@ const BEFORE_TESTING: Stage[] = ["saved", "researching", "sourcing"];
 /** The next step: a draft product store named after the idea, linked back to it. */
 export async function createStoreFromResearch(raw: Record<string, unknown>) {
   const idea = await loadResearch(raw.id);
+  if (idea.kind === "digital") throw new HttpError(400, "Stores are for physical products. Create a digital product draft instead.");
   if (idea.store_product_id) throw new HttpError(409, "This idea already has a store. Open it from the card.");
   const { id: productId } = await createStore({ name: idea.title, slug: raw.slug, theme: raw.theme });
   const { error } = await getSupabase().from("research_products").update({

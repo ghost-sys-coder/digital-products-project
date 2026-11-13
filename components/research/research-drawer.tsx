@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { slugify } from "@/lib/store-input";
 import {
   daysSince, STAGE_LABELS, STAGES, unitEconomics,
-  type CjDetail, type CjProduct, type ResearchAd, type ResearchCard, type ResearchProduct, type ResearchSupplier, type Stage,
+  type CjDetail, type CjProduct, type ResearchAd, type ResearchCard, type ResearchKind, type ResearchProduct, type ResearchSupplier, type Stage,
 } from "@/lib/research.types";
 import { centsInput, dollars, metaLibraryUrl, researchApi, toCents } from "./api";
 
@@ -27,6 +27,8 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
   const router = useRouter();
   const [title, setTitle] = useState(item.title);
   const [stage, setStage] = useState<Stage>(item.stage);
+  const [kind, setKind] = useState<ResearchKind>(item.kind);
+  const digital = kind === "digital";
   const [notes, setNotes] = useState(item.notes);
   const [image, setImage] = useState(item.image_url ?? "");
   const [price, setPrice] = useState(centsInput(item.target_price));
@@ -54,7 +56,7 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
   function fields() {
     const hasSupplier = supplier.name.trim() || supplier.cost.trim();
     return {
-      title, stage, notes, image_url: image.trim() || null, target_price: toCents(price), ads,
+      title, kind, stage, notes, image_url: image.trim() || null, target_price: toCents(price), ads,
       supplier: hasSupplier ? {
         source: supplier.source, id: supplier.id, name: supplier.name.trim() || title, url: supplier.url.trim() || null,
         cost: toCents(supplier.cost) ?? 0, shipping: toCents(supplier.shipping), shippingName: supplier.shippingName.trim() || null, days: supplier.days.trim() || null,
@@ -62,7 +64,7 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
     };
   }
   let preview: ReturnType<typeof unitEconomics> = null;
-  try { const draft = fields(); preview = unitEconomics({ target_price: draft.target_price, supplier: draft.supplier as ResearchSupplier | null }); } catch { /* shown when saving */ }
+  try { const draft = fields(); preview = unitEconomics({ kind, target_price: draft.target_price, supplier: draft.supplier as ResearchSupplier | null }); } catch { /* shown when saving */ }
 
   async function run(key: string, task: () => Promise<void>) {
     setPending(key); setMessage(null);
@@ -85,8 +87,8 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
   const createStore = () => run("store", async () => {
     // Save first, so the store and the idea agree on the name and nothing typed here is lost.
     onSaved((await researchApi<{ item: ResearchProduct }>({ action: "update", id: item.id, ...fields() })).item);
-    const { productId } = await researchApi<{ productId: string }>({ action: "create-store", id: item.id, slug });
-    router.push(`/admin/products/${productId}#product`);
+    const { productId } = await researchApi<{ productId: string }>({ action: digital ? "create-digital" : "create-store", id: item.id, slug });
+    router.push(digital ? `/admin/products/${productId}` : `/admin/products/${productId}#product`);
   });
   const remove = () => run("delete", async () => {
     try { await researchApi({ action: "delete", id: item.id }); } catch (failure) { setConfirming(false); throw failure; }
@@ -115,25 +117,28 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
         <div className="research-two">
           <label>Product<input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} /></label>
           <label>Stage<select value={stage} onChange={(event) => setStage(event.target.value as Stage)}>{STAGES.map((value) => <option key={value} value={value}>{STAGE_LABELS[value]}</option>)}</select></label>
+          <label>Kind<select value={kind} onChange={(event) => setKind(event.target.value as ResearchKind)} disabled={!!item.store}><option value="physical">Physical (dropshipped)</option><option value="digital">Digital (download)</option></select></label>
         </div>
 
         <section className="research-block">
           <h3>The numbers</h3>
           <div className="research-two">
             <label>Your price<input inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="29.99" /></label>
-            <label>Product cost<input inputMode="decimal" value={supplier.cost} onChange={set("cost")} placeholder="4.50" /></label>
-            <label>Shipping to US<input inputMode="decimal" value={supplier.shipping} onChange={set("shipping")} placeholder="6.49" /></label>
-            <label>Delivery time<input value={supplier.days} onChange={set("days")} maxLength={40} placeholder="7-12 days" /></label>
+            {!digital && <>
+              <label>Product cost<input inputMode="decimal" value={supplier.cost} onChange={set("cost")} placeholder="4.50" /></label>
+              <label>Shipping to US<input inputMode="decimal" value={supplier.shipping} onChange={set("shipping")} placeholder="6.49" /></label>
+              <label>Delivery time<input value={supplier.days} onChange={set("days")} maxLength={40} placeholder="7-12 days" /></label>
+            </>}
           </div>
           {preview ? <dl className="research-economics">
             <div><dt>Cost delivered</dt><dd>{dollars(preview.landed)}</dd></div>
             <div><dt>Card fees (est.)</dt><dd>{dollars(preview.fees)}</dd></div>
             <div className={preview.profit < 0 ? "bad" : preview.margin >= 0.3 ? "good" : ""}><dt>Profit per sale</dt><dd>{dollars(preview.profit)} <small>{Math.round(preview.margin * 100)}%</small></dd></div>
-          </dl> : <p className="field-help">Add your price and the product cost to see profit per sale. A healthy dropshipping margin is 30% or more, before ad spend.</p>}
+          </dl> : <p className="field-help">{digital ? "Add your price to see what each sale leaves after card fees." : "Add your price and the product cost to see profit per sale. A healthy dropshipping margin is 30% or more, before ad spend."}</p>}
           {preview && !preview.shippingKnown && <p className="field-help">Shipping isn&apos;t included yet: add it for a true number.</p>}
         </section>
 
-        <section className="research-block">
+        {!digital && <section className="research-block">
           <div className="research-block-head"><h3>Supplier</h3>
             {cj && <button type="button" className="button secondary small" onClick={findOnCj} disabled={pending === "cj" || title.trim().length < 2}>{pending === "cj" ? <Loader2 className="spin" size={14} /> : <Search size={14} />} Find on CJ</button>}
           </div>
@@ -148,7 +153,7 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
           </div>
           {supplier.shippingName && <p className="field-help">Cheapest CJ shipping: {supplier.shippingName}{supplier.days ? `, ${supplier.days}` : ""}.</p>}
           {supplier.url && <a className="quiet-link" href={supplier.url} target="_blank" rel="noopener noreferrer">Open supplier page <ArrowUpRight size={13} /></a>}
-        </section>
+        </section>}
 
         <section className="research-block">
           <div className="research-block-head"><h3>Proof it sells</h3>
@@ -178,14 +183,18 @@ export function ResearchDrawer({ item, onClose, onSaved, onDeleted, cj }: {
         <section className="research-block research-next">
           <h3>Next step</h3>
           {item.store ? <div className="research-store-links">
-            <p>This idea has a {item.store.status === "published" ? "live" : "draft"} store.</p>
-            <Link className="button primary" href={`/admin/products/${item.store_product_id}#product`}>Open the store editor <ArrowRight size={16} /></Link>
-            <a className="quiet-link" href={`/s/${item.store.slug}${item.store.status === "published" ? "" : "?preview=1"}`} target="_blank" rel="noopener noreferrer">View the page <ArrowUpRight size={13} /></a>
+            <p>This idea has a {item.store.status === "published" ? "live" : "draft"} {item.store.kind === "digital" ? "digital product" : "store"}.</p>
+            <Link className="button primary" href={item.store.kind === "digital" ? `/admin/products/${item.store_product_id}` : `/admin/products/${item.store_product_id}#product`}>Open the editor <ArrowRight size={16} /></Link>
+            {item.store.kind === "digital"
+              ? item.store.status === "published" && <a className="quiet-link" href={`/p/${item.store.slug}`} target="_blank" rel="noopener noreferrer">View the page <ArrowUpRight size={13} /></a>
+              : <a className="quiet-link" href={`/s/${item.store.slug}${item.store.status === "published" ? "" : "?preview=1"}`} target="_blank" rel="noopener noreferrer">View the page <ArrowUpRight size={13} /></a>}
           </div> : <>
-            <p className="field-help">Creates a draft product store named after this idea and opens it in the editor. Nothing goes live until you publish.</p>
+            <p className="field-help">{digital
+              ? "Creates a draft digital product named after this idea, at your price (or $19 if none), and opens it in the editor to add the file and cover. Nothing goes live until you publish."
+              : "Creates a draft product store named after this idea and opens it in the editor. Nothing goes live until you publish."}</p>
             <div className="research-store-create">
-              <label>Store URL<span className="research-prefix"><span>/s/</span><input value={slug} onChange={(event) => setSlug(event.target.value)} maxLength={80} /></span></label>
-              <button type="button" className="button primary" onClick={createStore} disabled={!!pending || !slug || !title.trim()}>{pending === "store" ? "Creating…" : <>Create store <ArrowRight size={16} /></>}</button>
+              <label>{digital ? "Product URL" : "Store URL"}<span className="research-prefix"><span>{digital ? "/p/" : "/s/"}</span><input value={slug} onChange={(event) => setSlug(event.target.value)} maxLength={80} /></span></label>
+              <button type="button" className="button primary" onClick={createStore} disabled={!!pending || !slug || !title.trim()}>{pending === "store" ? "Creating…" : <>{digital ? "Create draft" : "Create store"} <ArrowRight size={16} /></>}</button>
             </div>
           </>}
         </section>

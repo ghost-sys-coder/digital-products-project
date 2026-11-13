@@ -14,6 +14,7 @@ export const state = {
   payment_connections: [] as PaymentConnection[], payment_oauth_attempts: [] as PaymentOAuthAttempt[], product_payment_refs: [] as ProductPaymentRef[],
   product_variants: [] as ProductVariant[], shipping_rates: [] as ShippingRate[], shipping_profiles: [] as ShippingProfile[],
   research_products: [] as Row[], integration_tokens: [] as Row[],
+  mcp_clients: [] as Row[], mcp_connections: [] as Row[], mcp_secrets: [] as Row[], mcp_activity: [] as Row[], mcp_uploads: [] as Row[],
   dbError: false, insertError: null as DbError, markSentError: false,
   stripeProducts: new Map<string, Row>(), stripePrices: new Map<string, Row>(), sessions: new Map<string, Row>(), stripeShippingRates: new Map<string, Row>(),
 };
@@ -43,13 +44,13 @@ export function seedProduct(overrides: Partial<CatalogProduct> = {}): CatalogPro
   return product;
 }
 function rows(table: string): Row[] {
-  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs", "product_variants", "shipping_rates", "shipping_profiles", "research_products", "integration_tokens"].includes(table)) throw new Error(`Unexpected table: ${table}`);
+  if (!["orders", "products", "checkouts", "stores", "payment_connections", "payment_oauth_attempts", "product_payment_refs", "product_variants", "shipping_rates", "shipping_profiles", "research_products", "integration_tokens", "mcp_clients", "mcp_connections", "mcp_secrets", "mcp_activity", "mcp_uploads"].includes(table)) throw new Error(`Unexpected table: ${table}`);
   return state[table as "orders"] as unknown as Row[];
 }
 class Query implements PromiseLike<Result> {
   operation = "select"; values: Row = {}; filters: [string, unknown][] = [];
   sorting: [string, boolean][] = []; rowLimit = Infinity;
-  greater: [string, unknown][] = [];
+  greater: [string, unknown][] = []; nulls: [string, unknown][] = [];
   constructor(public table: string) {}
   insert(values: Row) { this.operation = "insert"; this.values = values; return this; }
   upsert(values: Row) { this.operation = "upsert"; this.values = values; return this; }
@@ -57,7 +58,8 @@ class Query implements PromiseLike<Result> {
   delete() { this.operation = "delete"; return this; }
   select() { return this; }
   eq(key: string, value: unknown) { this.filters.push([key, value]); return this; }
-  is(key: string, value: unknown) { return this.eq(key, value); }
+  // Like Postgres: a column that was never set is null.
+  is(key: string, value: unknown) { this.nulls.push([key, value]); return this; }
   gt(key: string, value: unknown) { this.greater.push([key, value]); return this; }
   order(key: string, options?: { ascending?: boolean }) { this.sorting.push([key, options?.ascending !== false]); return this; }
   limit(value: number) { this.rowLimit = value; return this; }
@@ -75,6 +77,11 @@ class Query implements PromiseLike<Result> {
     }
     if (this.operation === "insert") {
       if (state.insertError) return { data: null, error: state.insertError };
+      if (Array.isArray(this.values)) {
+        const rows = (this.values as Row[]).map((values) => ({ created_at: new Date().toISOString(), ...values }));
+        tableRows.push(...rows);
+        return { data: rows.map((row) => ({ ...row })), error: null };
+      }
       if (tableRows.some((row) => (this.values.id !== undefined && row.id === this.values.id) ||
         (this.table === "orders" && (row.stripe_session_id === this.values.stripe_session_id || (this.values.download_token_hash != null && row.download_token_hash === this.values.download_token_hash))) ||
         (this.table === "products" && row.store_id === this.values.store_id && row.slug === this.values.slug))) {
@@ -83,10 +90,16 @@ class Query implements PromiseLike<Result> {
       let data;
       if (this.table === "orders") data = seedOrder(this.values as Partial<Order>);
       else if (this.table === "products") data = seedProduct({ status: "draft", revision: 0, stripe_price_id: null, stripe_product_id: null, storage_path: null, download_filename: null, ...this.values } as Partial<CatalogProduct>);
-      else { data = { created_at: new Date().toISOString(), ...this.values }; tableRows.push(data); }
+      else {
+        const defaults: Row = this.table === "mcp_connections" ? { id: randomUUID(), last_used_at: null, revoked_at: null, client_id: null }
+          : this.table === "mcp_uploads" ? { id: randomUUID() } : this.table === "mcp_activity" ? { id: tableRows.length + 1 }
+          : this.table === "mcp_secrets" ? { details: {}, expires_at: null, used_at: null } : {};
+        data = { created_at: new Date().toISOString(), ...defaults, ...this.values }; tableRows.push(data);
+      }
       return { data: { ...data }, error: null };
     }
-    let matches = tableRows.filter((row) => this.filters.every(([key, value]) => row[key] === value) && this.greater.every(([key, value]) => String(row[key]) > String(value)));
+    let matches = tableRows.filter((row) => this.filters.every(([key, value]) => row[key] === value) && this.greater.every(([key, value]) => String(row[key]) > String(value))
+      && this.nulls.every(([key, value]) => (row[key] ?? null) === value));
     if (this.operation === "delete") {
       const doomed = new Set(matches);
       state[this.table as "research_products"] = tableRows.filter((row) => !doomed.has(row));
@@ -197,6 +210,7 @@ export function resetFakes() {
   state.payment_connections = []; state.payment_oauth_attempts = []; state.product_payment_refs = [];
   state.product_variants = []; state.shipping_rates = []; state.shipping_profiles = [];
   state.research_products = []; state.integration_tokens = [];
+  state.mcp_clients = []; state.mcp_connections = []; state.mcp_secrets = []; state.mcp_activity = []; state.mcp_uploads = [];
   shippingRatesRetrieve.mockReset().mockImplementation(async (id: string) => { const rate = state.stripeShippingRates.get(id); if (!rate) throw { code: "resource_missing" }; return { ...rate }; });
   state.stripeShippingRates.clear();
   refundsCreate.mockReset().mockImplementation(async (input: Row) => ({ id: "re_test_1", amount: 10795, payment_intent: input.payment_intent, status: "succeeded" }));

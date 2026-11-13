@@ -30,7 +30,7 @@ export function ResearchWorkspace({ initialItems, meta, cj }: { initialItems: Re
   const [error, setError] = useState("");
   const [metaResult, setMetaResult] = useState<MetaSearch | null>(null);
   const [cjResult, setCjResult] = useState<CjProduct[] | null>(null);
-  const [manual, setManual] = useState({ title: "", url: "" });
+  const [manual, setManual] = useState<{ title: string; url: string; kind: "physical" | "digital" }>({ title: "", url: "", kind: "physical" });
 
   const byStage = useMemo(() => Object.fromEntries(STAGES.map((stage) => [stage, items.filter((item) => item.stage === stage)])), [items]);
   const open = items.find((item) => item.id === openId) ?? null;
@@ -90,8 +90,8 @@ export function ResearchWorkspace({ initialItems, meta, cj }: { initialItems: Re
     event.preventDefault();
     void run("manual", async () => {
       const ads = manual.url.trim() ? [{ url: manual.url.trim(), page: "", startedAt: null, source: "manual", note: "" }] : [];
-      const { item } = await researchApi<{ item: ResearchProduct }>({ action: "create", title: manual.title, ads });
-      upsert(item); setManual({ title: "", url: "" }); setOpenId(item.id);
+      const { item } = await researchApi<{ item: ResearchProduct }>({ action: "create", title: manual.title, kind: manual.kind, ads });
+      upsert(item); setManual({ title: "", url: "", kind: manual.kind }); setOpenId(item.id);
     });
   }
 
@@ -115,7 +115,10 @@ export function ResearchWorkspace({ initialItems, meta, cj }: { initialItems: Re
         </label>
         <button className="button primary" disabled={pending === "search" || query.trim().length < 2}>{pending === "search" ? <Loader2 className="spin" size={16} /> : <Search size={16} />} Search</button>
       </form> : <form className="research-manual" onSubmit={saveManual}>
-        <label>Product<input value={manual.title} onChange={(event) => setManual({ ...manual, title: event.target.value })} maxLength={120} required placeholder="e.g. Heated eye massager" /></label>
+        <div className="research-kind" role="radiogroup" aria-label="Kind of product">
+          {(["physical", "digital"] as const).map((kind) => <button key={kind} type="button" role="radio" aria-checked={manual.kind === kind} className={manual.kind === kind ? "active" : ""} onClick={() => setManual({ ...manual, kind })}>{kind === "physical" ? "Physical" : "Digital"}</button>)}
+        </div>
+        <label>Product<input value={manual.title} onChange={(event) => setManual({ ...manual, title: event.target.value })} maxLength={120} required placeholder={manual.kind === "digital" ? "e.g. Client onboarding template pack" : "e.g. Heated eye massager"} /></label>
         <label>Ad or product link <span className="optional">optional</span><input value={manual.url} onChange={(event) => setManual({ ...manual, url: event.target.value })} type="url" placeholder="https://…" /></label>
         <button className="button primary" disabled={pending === "manual" || !manual.title.trim()}><Plus size={16} /> Save to board</button>
       </form>}
@@ -193,10 +196,11 @@ export function ResearchWorkspace({ initialItems, meta, cj }: { initialItems: Re
                   : null}
                 <strong>{item.title}</strong>
                 <span className="research-signals">
+                  {item.kind === "digital" && <span className="signal digital">Digital</span>}
                   {days !== null && <span className={days >= 30 ? "signal strong" : "signal"}><Clock3 size={12} /> {days}d</span>}
                   {item.ads.length > 0 && <span className="signal"><Layers size={12} /> {item.ads.length} {item.ads.length === 1 ? "ad" : "ads"}</span>}
                   {economics && <span className={economics.margin >= 0.3 ? "signal good" : economics.margin < 0.15 ? "signal bad" : "signal"}>{Math.round(economics.margin * 100)}% margin</span>}
-                  {item.store && <span className="signal store"><Store size={12} /> {item.store.status === "published" ? "Live store" : "Draft store"}</span>}
+                  {item.store && <span className="signal store"><Store size={12} /> {item.store.status === "published" ? "Live" : "Draft"} {item.store.kind === "digital" ? "product" : "store"}</span>}
                 </span>
               </button>;
             })}

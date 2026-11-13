@@ -43,7 +43,7 @@ describe("research board", () => {
     expect(state.research_products[0]).toMatchObject({ store_product_id: store!.id, stage: "testing" });
 
     const { listResearch } = await import("../lib/research");
-    expect((await listResearch())[0].store).toEqual({ slug: "upright", status: "draft" });
+    expect((await listResearch())[0].store).toEqual({ slug: "upright", status: "draft", kind: "physical" });
     expect((await research({ action: "create-store", id, slug: "upright-2" })).status).toBe(409);
 
     expect((await research({ action: "delete", id })).status).toBe(200);

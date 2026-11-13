@@ -1,0 +1,33 @@
+/* OAuth consent (app/oauth/authorize/page.tsx): one card on the studio's cobalt-washed canvas. */
+.oauth {
+  --oa-ink: #0d1220; --oa-soft: #5a6172; --oa-line: rgba(16, 24, 48, .1); --oa-cobalt: #2b59ff; --oa-cobalt-deep: #1c3fd6; --oa-wash: #e9eeff;
+  min-height: 100vh; display: grid; place-items: center; padding: 32px 16px; color: var(--oa-ink);
+  font-family: var(--font-mona), system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: radial-gradient(80% 60% at 50% 0%, rgba(43, 89, 255, .14) 0%, rgba(43, 89, 255, 0) 70%), #f2f4f8;
+}
+.oauth-card { width: min(100%, 520px); padding: 34px; border: 1px solid var(--oa-line); border-radius: 24px; background: #fff; box-shadow: 0 30px 70px -40px rgba(16, 24, 48, .45); }
+.oauth-brand { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 650; letter-spacing: -.01em; margin-bottom: 30px; }
+.oauth-mark { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--oa-cobalt); color: #fff; font-size: 12px; font-weight: 750; }
+.oauth-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--oa-wash); color: var(--oa-cobalt); margin-bottom: 18px; }
+.oauth-icon.warn { background: #fff4e5; color: #9a5b00; }
+.oauth h1 { margin: 0; font-size: 24px; line-height: 1.25; font-weight: 600; letter-spacing: -.035em; }
+.oauth h1 strong { font-weight: 700; }
+.oauth-lede { margin: 12px 0 0; color: var(--oa-soft); font-size: 14px; line-height: 1.65; }
+.oauth-scopes { margin: 24px 0 0; padding: 0; border: 0; display: grid; gap: 10px; }
+.oauth-scopes legend { margin-bottom: 10px; font-size: 12px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; color: var(--oa-soft); }
+.oauth-scopes label { display: flex; gap: 12px; align-items: flex-start; margin: 0; padding: 14px 16px; border: 1px solid var(--oa-line); border-radius: 14px; cursor: pointer; transition: border-color .2s ease, background .2s ease; }
+.oauth-scopes label:hover { border-color: rgba(43, 89, 255, .35); }
+.oauth-scopes label:has(input:checked) { border-color: rgba(43, 89, 255, .45); background: #f7f9ff; }
+.oauth-scopes input { width: 18px; height: 18px; margin: 2px 0 0; padding: 0; accent-color: var(--oa-cobalt); flex: none; }
+.oauth-scopes span { display: grid; gap: 3px; font-size: 14px; }
+.oauth-scopes small { color: var(--oa-soft); font-size: 12.5px; line-height: 1.5; }
+.oauth-note { margin: 18px 0 0; font-size: 12.5px; line-height: 1.6; color: var(--oa-soft); }
+.oauth-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--oa-line); }
+.oauth-button { height: 46px; padding: 0 22px; border-radius: 12px; border: 1px solid transparent; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s ease, transform .2s ease; }
+.oauth-button:active { transform: translateY(1px); }
+.oauth-button.primary { background: var(--oa-cobalt); color: #fff; box-shadow: 0 10px 24px -12px rgba(43, 89, 255, .9); }
+.oauth-button.primary:hover { background: var(--oa-cobalt-deep); }
+.oauth-button.secondary { background: #fff; border-color: var(--oa-line); color: var(--oa-ink); }
+.oauth-button.secondary:hover { background: #f6f7fb; }
+.oauth-button:focus-visible, .oauth-scopes input:focus-visible { outline: 2px solid var(--oa-cobalt); outline-offset: 2px; }
+@media (max-width: 520px) { .oauth-card { padding: 26px 22px; } .oauth h1 { font-size: 21px; } }

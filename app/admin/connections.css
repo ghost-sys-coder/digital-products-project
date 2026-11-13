@@ -1,0 +1,68 @@
+/* Assistant connections (app/admin/connections, components/connections). Workspace theme tokens
+   from app/admin-theme.css; cobalt marks what's on, red only for failures and switching off. */
+
+.admin-shell .conn { display: grid; gap: 26px; }
+.admin-shell .conn-body { padding: 22px 26px 26px; }
+.admin-shell .conn-label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--ad-soft); }
+.admin-shell .conn-copy { display: flex; align-items: stretch; gap: 0; border: 1px solid var(--ad-edge); border-radius: 12px; background: #f6f7fb; overflow: hidden; }
+.admin-shell .conn-copy code, .admin-shell .conn-copy pre {
+  flex: 1; min-width: 0; margin: 0; padding: 12px 14px; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 12.5px;
+  color: var(--ad-text); background: none; overflow-x: auto; white-space: nowrap;
+}
+.admin-shell .conn-copy.multiline pre { white-space: pre; line-height: 1.6; }
+.admin-shell .conn-copy button { flex: none; width: 44px; border: 0; border-left: 1px solid var(--ad-edge); background: #fff; color: var(--ad-soft); cursor: pointer; display: grid; place-items: center; }
+.admin-shell .conn-copy button:hover { color: var(--ad-cobalt); }
+.admin-shell .conn-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 24px 0 4px; }
+.admin-shell .conn-tabs button {
+  border: 1px solid var(--ad-edge); background: #f6f7fb; color: var(--ad-soft); border-radius: 999px; padding: 8px 15px;
+  font: inherit; font-size: 13px; font-weight: 560; cursor: pointer; transition: background .2s ease, color .2s ease;
+}
+.admin-shell .conn-tabs button:hover { color: var(--ad-text); }
+.admin-shell .conn-tabs button.active { background: var(--ad-ink); border-color: var(--ad-ink); color: #fff; }
+.admin-shell .conn-steps { margin: 16px 0; padding-left: 20px; display: grid; gap: 8px; font-size: 13.5px; line-height: 1.6; color: var(--ad-text); }
+.admin-shell .conn-steps li::marker { color: var(--ad-cobalt); font-weight: 650; }
+.admin-shell .conn-steps code, .admin-shell .conn-log code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--ad-wash); color: var(--ad-cobalt-deep); }
+.admin-shell .conn-token { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 18px; margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--ad-edge); }
+.admin-shell .conn-token > label { flex: 1 1 220px; margin: 0; }
+.admin-shell .conn-token input:not([type="checkbox"]) { border-radius: 10px; }
+.admin-shell .conn-token fieldset { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; border: 0; }
+.admin-shell .conn-token legend { margin-bottom: 8px; font-size: 12px; font-weight: 550; }
+.admin-shell .conn-check { display: inline-flex; align-items: center; gap: 7px; margin: 0; font-size: 13px; font-weight: 500; }
+.admin-shell .conn-check input { width: 16px; height: 16px; margin: 0; padding: 0; accent-color: var(--ad-cobalt); }
+.admin-shell .conn-new-token { margin-top: 18px; padding: 16px; border-radius: 14px; border: 1px solid #f4dfb5; background: #fff8eb; }
+.admin-shell .conn-new-token p { margin: 0 0 12px; font-size: 13px; line-height: 1.6; color: #6b4a00; }
+.admin-shell .conn-body .form-error { margin: 16px 0 0; }
+
+.admin-shell .conn-list { list-style: none; margin: 0; padding: 0; }
+.admin-shell .conn-list li { display: flex; align-items: center; gap: 16px; padding: 18px 26px; border-top: 1px solid var(--ad-edge); }
+.admin-shell .conn-list li:first-child { border-top: 0; }
+.admin-shell .conn-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; background: var(--ad-wash); color: var(--ad-cobalt); }
+.admin-shell .conn-main { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.admin-shell .conn-main strong { font-size: 14.5px; font-weight: 620; }
+.admin-shell .conn-main > span { font-size: 12px; color: var(--ad-soft); }
+.admin-shell .conn-scopes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.admin-shell .conn-scopes button {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; border: 1px dashed #cdd3e0; background: #fff;
+  color: var(--ad-soft); font: inherit; font-size: 11.5px; font-weight: 580; cursor: pointer; transition: background .2s ease, color .2s ease, border-color .2s ease;
+}
+.admin-shell .conn-scopes button.on { border-style: solid; border-color: transparent; background: var(--ad-wash); color: var(--ad-cobalt-deep); }
+.admin-shell .conn-scopes button:focus-visible { outline: 2px solid var(--ad-cobalt); outline-offset: 2px; }
+.admin-shell .conn-off { flex: none; }
+
+.admin-shell .conn-empty { display: flex; align-items: center; gap: 8px; margin: 0; padding: 22px 26px; font-size: 13px; color: var(--ad-soft); }
+.admin-shell .conn-log { list-style: none; margin: 0; padding: 0; max-height: 520px; overflow-y: auto; }
+.admin-shell .conn-log li { display: grid; grid-template-columns: 120px 150px 190px minmax(0, 1fr); align-items: center; gap: 12px; padding: 11px 26px; border-top: 1px solid var(--ad-edge); font-size: 12.5px; }
+.admin-shell .conn-log li:first-child { border-top: 0; }
+.admin-shell .conn-log time { color: var(--ad-soft); }
+.admin-shell .conn-log-who { font-weight: 580; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-shell .conn-log code { justify-self: start; }
+.admin-shell .conn-log-what { display: flex; align-items: center; gap: 6px; color: var(--ad-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-shell .conn-log li.failed .conn-log-what { color: #a62434; }
+
+@media (max-width: 800px) {
+  .admin-shell .conn-body { padding: 18px; }
+  .admin-shell .conn-list li { flex-wrap: wrap; padding: 16px 18px; }
+  .admin-shell .conn-off { margin-left: 56px; }
+  .admin-shell .conn-log li { grid-template-columns: minmax(0, 1fr) auto; padding: 11px 18px; }
+  .admin-shell .conn-log-what { grid-column: 1 / -1; white-space: normal; }
+}
