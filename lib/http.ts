@@ -9,6 +9,17 @@ export function sameOrigin(req: Request) {
     throw new HttpError(403, "Please submit this form from the store.");
   }
 }
+/**
+ * For plain HTML form posts (a navigation, not fetch). Under the site's no-referrer policy a browser
+ * sends `Origin: null` for these, so the browser's own Sec-Fetch-Site header, which pages can't set,
+ * vouches for the request instead. The owner cookie is SameSite=Lax, so it never rides a cross-site POST.
+ */
+export function sameOriginForm(req: Request) {
+  const origin = req.headers.get("origin");
+  if (origin === new URL(getEnv().APP_URL).origin) return;
+  if ((origin === null || origin === "null") && req.headers.get("sec-fetch-site") === "same-origin") return;
+  throw new HttpError(403, "Please submit this form from the store.");
+}
 export function apiError(error: unknown) {
   if (!(error instanceof HttpError)) console.error(error instanceof ConfigurationError ? error.message : "Store request failed");
   return Response.json({ error: error instanceof HttpError ? error.message : "Something went wrong. Please try again." }, {
