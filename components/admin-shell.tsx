@@ -4,6 +4,7 @@ import { LayoutDashboard, Package, Receipt, Settings, ArrowUpRight, Truck } from
 import { Brand } from "./store";
 import { AdminProfileMenu, SignOutButton } from "./admin-account-menu";
 import { ownerProfile } from "@/lib/owner-profile";
+import { monaSans } from "@/app/studio-fonts";
 
 const links = [{ href: "/admin", label: "Overview", Icon: LayoutDashboard }, { href: "/admin/products", label: "Products", Icon: Package }, { href: "/admin/orders", label: "Orders", Icon: Receipt }, { href: "/admin/fulfillment", label: "Fulfilment", Icon: Truck }, { href: "/admin/settings", label: "Store settings", Icon: Settings }];
 export function AdminShell({ children, active, storeName = "VeilCode Studio", owner }: {
@@ -13,7 +14,7 @@ export function AdminShell({ children, active, storeName = "VeilCode Studio", ow
   owner?: Pick<User, "email" | "user_metadata">;
 }) {
   const profile = ownerProfile(owner);
-  return <div className="admin-shell">
+  return <div className={`admin-shell ${monaSans.variable}`}>
     <aside className="admin-sidebar">
       <Brand name={storeName} />
       <span className="sidebar-label">YOUR WORKSPACE</span>
