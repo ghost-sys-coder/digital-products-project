@@ -69,10 +69,10 @@ class Query implements PromiseLike<Result> {
     if (state.dbError) return { data: null, error: { code: "08000", message: "Database unavailable" } };
     const tableRows = rows(this.table);
     if (this.operation === "upsert") {
-      const existing = this.table === "integration_tokens"
-        ? tableRows.find(row => row.provider === this.values.provider)
+      const existing = this.table === "integration_tokens" ? tableRows.find(row => row.provider === this.values.provider)
+        : this.table === "mcp_clients" ? tableRows.find(row => row.client_id === this.values.client_id)
         : tableRows.find(row => row.connection_id === this.values.connection_id && row.product_id === this.values.product_id);
-      if (existing) Object.assign(existing, this.values); else tableRows.push({ ...this.values });
+      if (existing) Object.assign(existing, this.values); else tableRows.push({ created_at: new Date().toISOString(), ...this.values });
       return { data: null, error: null };
     }
     if (this.operation === "insert") {

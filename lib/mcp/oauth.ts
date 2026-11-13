@@ -6,6 +6,7 @@ import { HttpError } from "../http";
 import { STORE_ID } from "../store-config";
 import type { McpClient, McpConnection, McpScope, McpSecret } from "../database.types";
 import { SCOPES } from "./scopes";
+import { downloadFile } from "./files";
 
 export { SCOPES, SCOPE_LABELS } from "./scopes";
 
@@ -13,8 +14,9 @@ export { SCOPES, SCOPE_LABELS } from "./scopes";
 // for command-line agents (Claude Code, Codex). Owner-only: every grant is approved by the signed-in
 // owner on /oauth/authorize. Secrets are random, sent once, and stored only as SHA-256 hashes.
 //
-// Standards followed: OAuth 2.1 with PKCE (S256 only), RFC 7591 dynamic client registration, RFC 8414
-// authorization server metadata and RFC 9728 protected resource metadata, as the MCP spec requires.
+// Standards followed: OAuth 2.1 with PKCE (S256 only), RFC 7591 dynamic client registration, Client ID
+// Metadata Documents (an https URL as client_id, which Claude prefers), RFC 8414 authorization server
+// metadata, RFC 9728 protected resource metadata, and RFC 8252 port-agnostic loopback redirects.
 
 const CODE_TTL = 10 * 60_000;
 const ACCESS_TTL = 60 * 60_000;
@@ -51,6 +53,8 @@ export function authorizationServerMetadata() {
     token_endpoint_auth_methods_supported: ["none", "client_secret_post", "client_secret_basic"],
     revocation_endpoint_auth_methods_supported: ["none", "client_secret_post", "client_secret_basic"],
     code_challenge_methods_supported: ["S256"],
+    // Claude uses its published client document when both this and "none" (above) are advertised.
+    client_id_metadata_document_supported: true,
     service_documentation: `${origin}/admin/connections`,
   };
 }
@@ -99,9 +103,59 @@ export async function registerClient(body: Record<string, unknown>) {
 }
 
 export async function getClient(clientId: unknown): Promise<McpClient | null> {
-  if (typeof clientId !== "string" || clientId.length > 80) return null;
+  if (typeof clientId !== "string" || clientId.length > 500) return null;
   const { data } = await getSupabase().from("mcp_clients").select("*").eq("client_id", clientId).maybeSingle();
   return (data as McpClient | null) ?? null;
+}
+
+const LOOPBACK = ["localhost", "127.0.0.1", "[::1]"];
+
+/**
+ * Whether a requested redirect matches a registered one. Exact match, or, for loopback addresses,
+ * the same scheme, host, path and query on any port: desktop apps (Claude Code, Codex) listen on a
+ * port that changes every session (RFC 8252 section 7.3).
+ */
+export function redirectAllowed(registered: string[], requested: string) {
+  if (registered.includes(requested)) return true;
+  let wanted: URL;
+  try { wanted = new URL(requested); } catch { return false; }
+  if (wanted.protocol !== "http:" || !LOOPBACK.includes(wanted.hostname)) return false;
+  return registered.some((entry) => {
+    try {
+      const allowed = new URL(entry);
+      return allowed.protocol === "http:" && allowed.hostname === wanted.hostname && allowed.pathname === wanted.pathname && allowed.search === wanted.search;
+    } catch { return false; }
+  });
+}
+
+// ── Client ID Metadata Documents ─────────────────────────────────────────────────────────────
+
+/** A CIMD client_id is an https URL with a path, e.g. Claude's https://claude.ai/oauth/claude-code-client-metadata. */
+export function isMetadataClientId(value: unknown): value is string {
+  if (typeof value !== "string" || value.length > 500) return false;
+  try { const url = new URL(value); return url.protocol === "https:" && url.pathname.length > 1 && !url.hash && !url.username; } catch { return false; }
+}
+
+/**
+ * Reads a client's published metadata document (fetched safely: public https only, small) and keeps a
+ * copy in mcp_clients so connections can reference it. The document must name itself as client_id.
+ */
+export async function resolveMetadataClient(clientId: string): Promise<McpClient> {
+  let doc: Record<string, unknown>;
+  try {
+    const { bytes } = await downloadFile(clientId, 64 * 1024);
+    doc = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+  } catch { throw new OAuthError("invalid_client", "Couldn't read this app's published client details."); }
+  if (!doc || typeof doc !== "object" || doc.client_id !== clientId) throw new OAuthError("invalid_client", "This app's client details don't match its client id.");
+  const uris = doc.redirect_uris;
+  if (!Array.isArray(uris) || uris.length < 1 || uris.length > 10 || !uris.every(validRedirectUri)) throw new OAuthError("invalid_client", "This app's client details list no usable return address.");
+  const method = typeof doc.token_endpoint_auth_method === "string" ? doc.token_endpoint_auth_method : "none";
+  if (method !== "none") throw new OAuthError("invalid_client", "Only public clients can sign in with published client details.");
+  const name = typeof doc.client_name === "string" && doc.client_name.trim() ? doc.client_name.replace(/[\u0000-\u001F\u007F]/g, "").trim().slice(0, 120) : new URL(clientId).hostname;
+  const client = { client_id: clientId, name, redirect_uris: uris as string[], secret_hash: null };
+  const { error } = await getSupabase().from("mcp_clients").upsert(client);
+  if (error) throw new OAuthError("server_error", "Could not save this app's details.", 500);
+  return { ...client, created_at: new Date().toISOString() };
 }
 
 // ── Authorization ─────────────────────────────────────────────────────────────────────────────
@@ -117,10 +171,11 @@ export type AuthorizeRequest = { client: McpClient; redirectUri: string; state: 
  * (never redirected), as OAuth requires; the rest go back to the client with ?error=.
  */
 export async function readAuthorizeRequest(params: Record<string, string | undefined>): Promise<AuthorizeRequest> {
-  const client = await getClient(params.client_id);
+  // Published client details are read fresh on every sign-in, so changes to them take effect.
+  const client = isMetadataClientId(params.client_id) ? await resolveMetadataClient(params.client_id) : await getClient(params.client_id);
   if (!client) throw new OAuthError("invalid_client", "This app isn't registered with the studio. Remove the connection in the app and add it again.");
   const redirectUri = params.redirect_uri ?? (client.redirect_uris.length === 1 ? client.redirect_uris[0] : "");
-  if (!client.redirect_uris.includes(redirectUri)) throw new OAuthError("invalid_request", "The app sent a return address it didn't register.");
+  if (!redirectAllowed(client.redirect_uris, redirectUri)) throw new OAuthError("invalid_request", "The app sent a return address it didn't register.");
   if (params.response_type !== "code") throw new OAuthError("unsupported_response_type", "Only the authorization code flow is supported.");
   const challenge = params.code_challenge ?? "";
   if (params.code_challenge_method !== "S256" || !/^[A-Za-z0-9_-]{43}$/.test(challenge)) throw new OAuthError("invalid_request", "PKCE with S256 is required.");
